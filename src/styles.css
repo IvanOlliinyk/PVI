@@ -17,6 +17,7 @@
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     font-size: 30px;
     margin-left: 10px;
+    text-decoration: none;
 }
 
 .info{
@@ -24,17 +25,103 @@
     align-items: center;
 }
 
-.notification{
-    background-image: url(assets/bell.png);
-    background-color: transparent;
+/* Контейнер навколо кнопки */
+.notification-wrapper {
+    position: relative; /* Відносне позиціювання для спливаючого вікна */
+    display: inline-block;
+}
+
+/* Кнопка (або посилання) зі значком дзвіночка */
+#notification-btn.notification {
+    display: inline-block;
+    background-image: url("assets/bell.png"); /* Шлях до іконки можна змінити */
     background-size: 30px;
     background-position: center;
     background-repeat: no-repeat;
-    border: none;
-    height: 40px;
     width: 40px;
-    margin-right: 15px;
+    height: 40px;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    outline: none;
+}
+
+/* Спливаюче вікно */
+#notifications-popup.popup {
+    display: none; /* Приховуємо за замовчуванням */
+    position: absolute; /* Абсолютне позиціювання відносно .notification-wrapper */
+    top: 50px;
+    right: 0;
+    width: 300px;
+    /* Темний фон для стилістики */
+    background-color: #333333;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+/* Контейнер усередині попапу */
+.popup-content {
+    padding: 10px;
+    font-size: 14px;
+    color: #ffffff;
+    /* Додаємо шрифт, як у файлі */
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Прокручування у разі великої кількості сповіщень */
+.popup-body {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Окремий блок для кожної нотифікації */
+.notification {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
+    padding: 10px;
+    /* Темніший відтінок для межі */
+    border-bottom: 1px solid #444444;
+    color: #ffffff;
+}
+
+/* Прибираємо лінію для останнього елемента */
+.notification:last-child {
+    border-bottom: none;
+}
+
+/* Ліва частина - іконка та ім’я поруч */
+.notification > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Аватар */
+.notification img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Ім’я користувача */
+.notification > div p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+/* Текст повідомлення праворуч (дещо менший) */
+.notification p:last-child {
+    margin: 0;
+    font-size: 14px;
+    color: #ffffff;
+    text-align: right;
+    word-wrap: break-word;
 }
 
 .user{
@@ -66,17 +153,26 @@
     width: 20%;
 }
 
-.side_bar button{
+.side_bar a{
     width: 100%;
     height: 5%;
     color: white;
     background-color: transparent;
     border: none;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 30px;
+    align-content: center;
 }
 
-.side_bar button:hover{
+.side_bar a {
+    text-decoration: none;
+    color: white;
+    font-size: 30px;
+    display: block;
+    text-align: center;
+}
+
+
+.side_bar a:hover{
     background-color: #444444;
 }
 
