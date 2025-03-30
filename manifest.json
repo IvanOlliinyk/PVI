@@ -1,5 +1,5 @@
 {
-  "name": "Потужний студент",
+  "name": "Potuzhnyi student",
   "short_name": "Peremoga App",
   "description": "Це прогресивний веб-додаток (PWA) для швидкого та зручного доступу до контенту.",
   "start_url": "/",
@@ -7,5 +7,48 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
-  "theme_color": "#000000"
+  "theme_color": "#000000",
+
+  "icons": [
+    {
+      "src": "./src/assets/icons.128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "./src/assets/icons.192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./src/assets/icons.256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "./src/assets/icons.512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./src/assets/screenshot1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "./src/assets/screenshot2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "./src/assets/screenshot3.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ]
 }
