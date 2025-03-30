@@ -1,200 +1,410 @@
-.students{
+@keyframes neonPulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; }
+    100% { opacity: 0.8; }
+}
+
+@keyframes neonGlow {
+    0% { filter: drop-shadow(0 0 5px #0ff) drop-shadow(0 0 10px #0ff); }
+    50% { filter: drop-shadow(0 0 10px #f0f) drop-shadow(0 0 20px #f0f); }
+    100% { filter: drop-shadow(0 0 5px #0ff) drop-shadow(0 0 10px #0ff); }
+}
+
+@keyframes neonShake {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+    75% { transform: rotate(-3deg); }
+    100% { transform: rotate(0deg); }
+}
+
+@keyframes borderFlow {
+    0% { border-color: #0ff; }
+    33% { border-color: #f0f; }
+    66% { border-color: #ff0; }
+    100% { border-color: #0ff; }
+}
+
+:root {
+    --neon-primary: #00ffff;
+    --neon-secondary: #ff00ff;
+    --neon-accent: #ff00cc;
+    --neon-yellow: #ffff00;
+    --neon-green: #00ff8c;
+    --neon-dark: #111;
+    --neon-darker: #050505;
+    --neon-medium: #222;
+    --neon-light: #3a3a3a;
+}
+
+body {
+    background-color: var(--neon-darker);
+    color: white;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+.students {
     margin: 0;
     padding: 0;
 }
 
-.top_bar{
-    background-color: blueviolet;
+.top_bar {
+    background: linear-gradient(90deg, #1a0033, #4b0082);
     width: 100%;
-    height: 5vh;
+    height: 46px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    box-shadow: 0 0 15px var(--neon-primary), 0 0 25px var(--neon-secondary);
+    border-bottom: 1px solid var(--neon-primary);
+    position: relative;
+    z-index: 100;
 }
 
-.title{
+.title {
     color: white;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     font-size: 30px;
     margin-left: 10px;
     text-decoration: none;
+    text-shadow: 0 0 5px var(--neon-primary), 0 0 10px var(--neon-primary), 0 0 15px var(--neon-primary);
+    animation: neonPulse 3s infinite ease-in-out;
+    font-weight: bold;
+    letter-spacing: 1px;
+    transform: perspective(400px) rotateX(10deg);
+    transform-origin: bottom;
 }
 
-.info{
+.left {
     display: flex;
     align-items: center;
 }
 
-/* Контейнер навколо кнопки */
-.notification-wrapper {
-    position: relative; /* Відносне позиціювання для спливаючого вікна */
-    display: inline-block;
+.info {
+    display: flex;
+    align-items: center;
 }
 
-/* Кнопка (або посилання) зі значком дзвіночка */
-#notification-btn.notification {
+/* Notification wrapper styles */
+.notification-wrapper {
+    position: relative;
     display: inline-block;
-    background-image: url("assets/bell.png"); /* Шлях до іконки можна змінити */
+    margin-right: 15px;
+}
+
+/* Notification button */
+#notification-btn.notification {
+    display: flex;
     background-size: 30px;
     background-position: center;
     background-repeat: no-repeat;
+    background-image: url(assets/bell-yellow.png);
     width: 40px;
     height: 40px;
     cursor: pointer;
     border: none;
     text-decoration: none;
     outline: none;
+    padding: 0;
+    font-size: 0px;
+    text-indent: 100%;
+    filter: drop-shadow(0 0 5px var(--neon-yellow)) drop-shadow(0 0 8px var(--neon-yellow));
+    transition: all 0.3s ease;
 }
 
-/* Спливаюче вікно */
+#notification-btn.notification:hover {
+    transform: scale(1.1);
+    animation: neonShake 0.5s ease-in-out;
+}
+
+/* Notification popup */
 #notifications-popup.popup {
-    display: none; /* Приховуємо за замовчуванням */
-    position: absolute; /* Абсолютне позиціювання відносно .notification-wrapper */
+    display: none;
+    position: absolute;
     top: 50px;
-    right: 0;
+    right: 10px;
     width: 300px;
-    /* Темний фон для стилістики */
-    background-color: #333333;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    background-color: rgba(15, 15, 20, 0.9);
+    box-shadow: 0 0 15px var(--neon-secondary), 0 0 25px var(--neon-primary);
+    border: 1px solid var(--neon-primary);
     border-radius: 10px;
     z-index: 1000;
     overflow: hidden;
+    backdrop-filter: blur(10px);
 }
 
-/* Контейнер усередині попапу */
+/* Popup content */
 .popup-content {
     padding: 10px;
     font-size: 14px;
     color: #ffffff;
-    /* Додаємо шрифт, як у файлі */
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Прокручування у разі великої кількості сповіщень */
+/* Popup body with scrolling */
 .popup-body {
     max-height: 400px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--neon-primary) var(--neon-dark);
 }
 
-/* Окремий блок для кожної нотифікації */
+.popup-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.popup-body::-webkit-scrollbar-track {
+    background: var(--neon-dark);
+}
+
+.popup-body::-webkit-scrollbar-thumb {
+    background-color: var(--neon-primary);
+    border-radius: 20px;
+}
+
+/* Individual notification */
 .notification {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px;
-    /* Темніший відтінок для межі */
-    border-bottom: 1px solid #444444;
+    padding: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     color: #ffffff;
+    transition: all 0.3s ease;
+    background: linear-gradient(90deg, rgba(40, 10, 60, 0.2), rgba(60, 20, 80, 0.2));
 }
 
-/* Прибираємо лінію для останнього елемента */
 .notification:last-child {
     border-bottom: none;
 }
 
-/* Ліва частина - іконка та ім’я поруч */
+.notification:hover {
+    background: linear-gradient(90deg, rgba(60, 20, 120, 0.4), rgba(100, 30, 160, 0.4));
+    animation: neonShake 0.5s ease-in-out;
+}
+
+/* Avatar and username layout */
 .notification > div {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-/* Аватар */
+/* Avatar styling */
 .notification img {
     width: 40px;
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
+    border: 2px solid var(--neon-primary);
+    box-shadow: 0 0 10px var(--neon-primary);
 }
 
-/* Ім’я користувача */
+/* Username styling */
 .notification > div p {
     margin: 0;
     font-size: 14px;
     font-weight: bold;
     color: #ffffff;
+    text-shadow: 0 0 5px var(--neon-primary);
 }
 
-/* Текст повідомлення праворуч (дещо менший) */
+/* Notification message */
 .notification p:last-child {
     margin: 0;
     font-size: 14px;
-    color: #ffffff;
+    color: rgba(255, 255, 255, 0.9);
     text-align: right;
     word-wrap: break-word;
 }
 
-.user{
-    background-image: url(assets/user.png);
-    background-color: transparent;
-    background-size: 40px;
-    background-position: center;
-    background-repeat: no-repeat;
-    border: none;
-    height: 40px;
-    width: 40px;
-    margin-right: 10px;
-}
-
-.username{
+.username {
     color: white;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     font-size: 20px;
     align-items: center;
-    margin-right: 5px;
+    margin-right: 15px;
+    text-shadow: 0 0 5px var(--neon-green), 0 0 10px var(--neon-green);
 }
 
-.side_bar{
+/* Current state styling */
+.current {
+    background: linear-gradient(45deg, #2d0245, #510080);
+    box-shadow: inset 0 0 10px rgba(255, 0, 255, 0.5);
+}
+
+/* Sidebar styling */
+.side_bar {
     display: flex;
     flex-direction: column;
     align-items: center;
-    background-color: #222222;
-    height: 95vh;
+    background: linear-gradient(180deg, #0a0a0a, #1a0033);
+    height: 94vh;
     width: 20%;
-}
-
-.side_bar a{
-    width: 100%;
-    height: 5%;
-    color: white;
-    background-color: transparent;
-    border: none;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    align-content: center;
+    box-shadow: inset -5px 0 15px rgba(0, 255, 255, 0.2);
+    border-right: 1px solid var(--neon-primary);
+    overflow: hidden;
+    transition: all 0.3s ease;
 }
 
 .side_bar a {
-    text-decoration: none;
+    width: 100%;
+    height: 5%;
     color: white;
-    font-size: 30px;
+    border: none;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    align-content: center;
+    text-decoration: none;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin: 5px 0;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+.side_bar a:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background-color: var(--neon-primary);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+}
+
+.side_bar a:hover {
+    background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), transparent);
+    text-shadow: 0 0 5px var(--neon-primary), 0 0 10px var(--neon-primary);
+    letter-spacing: 1px;
+}
+
+.side_bar a:hover:before {
+    transform: scaleY(1);
+    box-shadow: 0 0 10px var(--neon-primary), 0 0 20px var(--neon-primary);
+}
+
+/* Burger menu button */
+.burger-btn {
+    width: 40px;
+    height: 40px;
+    display: none;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    margin-left: 10px;
+    position: relative;
+}
+
+.burger-btn:before, .burger-btn:after, .burger-btn span {
+    content: '';
+    display: block;
+    width: 30px;
+    height: 3px;
+    background-color: white;
+    position: absolute;
+    left: 5px;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 5px var(--neon-primary), 0 0 10px var(--neon-primary);
+}
+
+.burger-btn:before {
+    top: 10px;
+}
+
+.burger-btn span {
+    top: 18px;
+}
+
+.burger-btn:after {
+    top: 26px;
+}
+
+.burger-btn:hover:before, .burger-btn:hover:after, .burger-btn:hover span {
+    box-shadow: 0 0 10px var(--neon-secondary), 0 0 15px var(--neon-secondary);
+}
+
+/* Burger menu content */
+.burger {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    background: linear-gradient(180deg, #0a0a0a, #1a0033);
+    width: 100%;
+    border-bottom: 1px solid var(--neon-primary);
+    box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
+    z-index: 90;
+}
+
+.burger a {
+    width: 100%;
+    color: white;
+    border: none;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    text-decoration: none;
+    font-size: 22px;
     display: block;
     text-align: center;
+    padding: 15px 0;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
 }
 
-
-.side_bar a:hover{
-    background-color: #444444;
+.burger a:hover {
+    background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.1));
+    text-shadow: 0 0 5px var(--neon-primary), 0 0 10px var(--neon-primary);
 }
 
-.content-wrapper{
+/* Content wrapper */
+.content-wrapper {
     display: flex;
 }
 
-.content{
+/* Main content area */
+.content {
     width: 80%;
-    height: 95vh;
-    background-color: #333333;
+    height: 94vh;
+    background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
     color: white;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     font-size: 20px;
+    overflow-y: auto;
+    position: relative;
 }
 
-.content h1{
+.content h1 {
     margin-top: 30px;
     margin-left: 40px;
+    font-size: 32px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 5px var(--neon-primary), 0 0 10px var(--neon-primary);
+    display: inline-block;
+    position: relative;
 }
 
-.add{
+.content h1:after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 3px;
+    bottom: -5px;
+    left: 0;
+    background: linear-gradient(90deg, var(--neon-primary), var(--neon-secondary));
+    box-shadow: 0 0 10px var(--neon-primary);
+    border-radius: 3px;
+}
+
+/* Add button */
+.add {
     background-image: url("assets/add.png");
     height: 50px;
     width: 50px;
@@ -203,27 +413,82 @@
     background-position: center;
     background-repeat: no-repeat;
     border: none;
-    float: right;
+    right: 0;
+    bottom: 25px;
     margin-right: 50px;
+    cursor: pointer;
+    font-size: 0px;
+    z-index: 1;
+    position: fixed;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 5px var(--neon-green)) drop-shadow(0 0 8px var(--neon-green));
 }
 
-.table{
+.add:hover {
+    transform: scale(1.1) rotate(90deg);
+    filter: drop-shadow(0 0 10px var(--neon-green)) drop-shadow(0 0 15px var(--neon-green));
+}
+
+/* Table styling */
+.table {
     margin-left: 40px;
     margin-top: 90px;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     width: 90%;
-    font-size: 20px;
+    font-size: 18px;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     color: white;
     text-align: center;
-    border: 2px solid blueviolet;
+    border: 2px solid var(--neon-primary);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 15px var(--neon-primary), inset 0 0 10px rgba(0, 255, 255, 0.2);
+    animation: borderFlow 8s infinite ease;
 }
 
-.table th, .table td {
-    border: 2px solid blueviolet;
-    padding: 10px;
+.table th {
+    background: linear-gradient(45deg, #1a0033, #4b0082);
+    padding: 15px;
+    font-weight: bold;
+    border: 1px solid var(--neon-secondary);
+    position: relative;
+    overflow: hidden;
+    text-shadow: 0 0 5px var(--neon-primary);
 }
 
+.table th:after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-primary), transparent);
+    bottom: 0;
+    left: 0;
+}
+
+.table td {
+    padding: 12px;
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.table tr {
+    background: linear-gradient(90deg, rgba(26, 0, 51, 0.2), rgba(75, 0, 130, 0.2));
+    transition: all 0.3s ease;
+}
+
+.table tr:hover {
+    background: linear-gradient(90deg, rgba(26, 0, 51, 0.4), rgba(75, 0, 130, 0.4));
+    text-shadow: 0 0 5px var(--neon-primary);
+}
+
+.table tr:hover td {
+    border-color: var(--neon-primary);
+}
+
+/* Checkbox container */
 .checkbox-container input {
     display: none;
 }
@@ -231,12 +496,24 @@
 .custom-check {
     width: 30px;
     height: 30px;
-    border: 2px solid white; /* Білий колір рамки */
-    border-radius: 20%; /* Заокруглення рамки */
+    border: 2px solid white;
+    border-radius: 20%;
     position: relative;
     display: inline-block;
     cursor: pointer;
-    transition: 0.3s; /* Плаваний перехід кольору */
+    transition: all 0.3s ease;
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+.custom-check:hover {
+    box-shadow: 0 0 10px var(--neon-primary), 0 0 15px var(--neon-primary);
+    border-color: var(--neon-primary);
+}
+
+.checkbox-container input:checked + .custom-check {
+    background: rgba(0, 255, 255, 0.2);
+    border-color: var(--neon-primary);
+    box-shadow: 0 0 10px var(--neon-primary), 0 0 15px var(--neon-primary);
 }
 
 .checkbox-container input:checked + .custom-check::after {
@@ -244,30 +521,37 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 7px;
-    height: 15px;
+    width: 8px;
+    height: 16px;
     border: solid white;
-    border-width: 0 2px 2px 0;
+    border-width: 0 3px 3px 0;
     transform: translate(-50%, -50%) rotate(45deg);
+    filter: drop-shadow(0 0 3px var(--neon-primary));
 }
 
-.active{
+/* Status indicators */
+.active {
     width: 20px;
     height: 20px;
-    background-color: green;
+    background-color: var(--neon-green);
     border-radius: 50%;
     margin: auto;
+    box-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
+    animation: neonPulse 2s infinite ease-in-out;
 }
 
-.inactive{
+.inactive {
     width: 20px;
     height: 20px;
-    background-color: red;
+    background-color: #ff3366;
     border-radius: 50%;
     margin: auto;
+    box-shadow: 0 0 10px #ff3366, 0 0 20px #ff3366;
+    animation: neonPulse 2s infinite ease-in-out;
 }
 
-.edit{
+/* Edit button */
+.edit {
     background-image: url("assets/edit.png");
     height: 30px;
     width: 30px;
@@ -277,9 +561,18 @@
     background-repeat: no-repeat;
     border: none;
     margin-right: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 2px var(--neon-primary));
 }
 
-.delete{
+.edit:hover {
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 5px var(--neon-primary)) drop-shadow(0 0 10px var(--neon-primary));
+}
+
+/* Delete button */
+.delete {
     background-image: url("assets/delete.png");
     height: 30px;
     width: 30px;
@@ -289,39 +582,636 @@
     background-repeat: no-repeat;
     border: none;
     margin-left: 10px;
+    cursor: pointer;
+    align-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 2px #ff3366);
 }
 
-.table-pages{
+.delete:hover {
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 5px #ff3366) drop-shadow(0 0 10px #ff3366);
+}
+
+/* Table pagination */
+.table-pages {
     display: flex;
     justify-content: center;
-    margin-top: 20px;
+    margin-top: 30px;
+    gap: 10px;
 }
 
-.table-pages button{
+.table-pages button {
     width: 50px;
     height: 50px;
-    background-color: transparent;
-    border: none;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--neon-primary);
+    border-radius: 8px;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     font-size: 20px;
     color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
 }
 
-.prev{
+.prev {
     background-image: url("assets/prev.png");
     background-size: 20px;
     background-position: center;
     background-repeat: no-repeat;
 }
 
-.next{
+.next {
     background-image: url("assets/next.png");
     background-size: 20px;
     background-position: center;
     background-repeat: no-repeat;
 }
 
-.table-pages button:hover{
-    background-color: #444444;
+.table-pages button:hover {
+    background-color: rgba(0, 255, 255, 0.1);
+    box-shadow: 0 0 10px var(--neon-primary), 0 0 15px var(--neon-primary);
+    transform: translateY(-3px);
+}
 
+.table-pages button:before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--neon-primary), transparent);
+    top: 0;
+    left: -100%;
+    transition: all 0.5s ease;
+}
+
+.table-pages button:hover:before {
+    left: 0;
+}
+
+/* Profile menu */
+.profile-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-right: 15px;
+}
+
+#profile-btn.user {
+    display: flex;
+    background-color: transparent;
+    background-image: url("assets/user.png");
+    background-size: 30px;
+    background-position: center;
+    background-repeat: no-repeat;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    outline: none;
+    padding: 0;
+    font-size: 0px;
+    filter: drop-shadow(0 0 5px var(--neon-green)) drop-shadow(0 0 8px var(--neon-green));
+    transition: all 0.3s ease;
+}
+
+#profile-btn.user:hover {
+    transform: scale(1.1);
+}
+
+#profile-popup.popup {
+    display: none;
+    position: absolute;
+    top: 50px;
+    left: -10px;
+    width: 180px;
+    background-color: rgba(15, 15, 20, 0.9);
+    box-shadow: 0 0 15px var(--neon-green), 0 0 25px var(--neon-primary);
+    border: 1px solid var(--neon-primary);
+    border-radius: 10px;
+    z-index: 1000;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+#profile-popup.popup button {
+    display: block;
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 15px;
+    color: #ffffff;
+    background-color: transparent;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+#profile-popup.popup button:hover {
+    background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.1));
+    text-shadow: 0 0 5px var(--neon-primary);
+    padding-left: 20px;
+}
+
+#profile-popup.popup button:before {
+    content: '';
+    position: absolute;
+    width: 5px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--neon-primary), var(--neon-secondary));
+    left: -5px;
+    top: 0;
+    transition: all 0.3s ease;
+}
+
+#profile-popup.popup button:hover:before {
+    left: 0;
+}
+
+/* Add popup styling - updated select and options styling */
+#add-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    background: linear-gradient(135deg, rgba(40, 10, 80, 0.9), rgba(20, 5, 40, 0.9));
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 20px var(--neon-primary), 0 0 40px var(--neon-secondary);
+    border: 1px solid var(--neon-primary);
+    border-radius: 10px;
+    z-index: 1000;
+    padding: 25px;
+    visibility: hidden;
+    animation: borderFlow 8s infinite ease;
+}
+
+#add-popup span {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 25px;
+    text-align: center;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+    text-shadow: 0 0 5px var(--neon-primary), 0 0 10px var(--neon-primary);
+    letter-spacing: 1px;
+}
+
+#add-popup button#close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 30px;
+    height: 30px;
+    background-size: 20px;
+    background-image: url("assets/close.png");
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: none;
+    cursor: pointer;
+    outline: none;
+    font-size: 0px;
+    filter: drop-shadow(0 0 3px var(--neon-secondary));
+    transition: all 0.3s ease;
+}
+
+#add-popup button#close:hover {
+    transform: rotate(90deg);
+    filter: drop-shadow(0 0 5px var(--neon-secondary)) drop-shadow(0 0 10px var(--neon-secondary));
+}
+
+.add-popup-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.add-popup-content label {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+.add-popup-content input, .add-popup-content select {
+    padding: 12px;
+    font-size: 16px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid var(--neon-primary);
+    border-radius: 8px;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 0 5px rgba(0, 255, 255, 0.2);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+/* Style for select focus state */
+.add-popup-content select:focus {
+    border-color: var(--neon-secondary);
+    outline: none;
+    box-shadow: 0 0 8px var(--neon-primary), inset 0 0 5px rgba(0, 255, 255, 0.3);
+}
+
+/* Style for select options */
+.add-popup-content select option {
+    background-color: #2a1a4a;
+    color: white;
+    padding: 12px;
+    font-size: 16px;
+}
+
+/* Style for option groups */
+.add-popup-content select optgroup {
+    background-color: #1a0033;
+    color: var(--neon-primary);
+    font-weight: bold;
+}
+
+#add-popup button.cancel, #add-popup button.proceed {
+    width: calc(50% - 10px);
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    margin-top: 25px;
+    transition: all 0.3s ease;
+    font-weight: bold;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+}
+
+#add-popup button.cancel {
+    background: linear-gradient(45deg, #6a0dad, #9932cc);
+    color: white;
+    box-shadow: 0 0 10px rgba(106, 13, 173, 0.7);
+}
+
+#add-popup button.proceed {
+    background: linear-gradient(45deg, #1a1a2e, #16213e);
+    color: white;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+#add-popup button.cancel:hover, #add-popup button.proceed:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 255, 255, 0.5);
+}
+
+#add-popup button.cancel:hover {
+    background: linear-gradient(45deg, #7b19e6, #a346d5);
+}
+
+#add-popup button.proceed:hover {
+    background: linear-gradient(45deg, #1f1f3a, #1e294b);
+}
+
+.proceed {
+    margin-left: 13px;
+}
+
+/* Delete confirmation popup */
+.delete-popup {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, rgba(40, 10, 80, 0.9), rgba(20, 5, 40, 0.9));
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 20px #ff3366, 0 0 40px rgba(255, 51, 102, 0.5);
+    border: 1px solid #ff3366;
+    border-radius: 10px;
+    z-index: 1000;
+    width: 350px;
+    padding: 25px;
+    text-align: center;
+    color: white;
+    animation: neonPulse 2s infinite ease-in-out;
+}
+
+.delete-popup-content p {
+    margin-bottom: 25px;
+    font-size: 18px;
+    text-shadow: 0 0 5px rgba(255, 51, 102, 0.5);
+}
+
+.delete-popup-content button {
+    margin: 8px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.delete-popup-content button:first-of-type {
+    background: linear-gradient(45deg, #333333, #444444);
+    color: white;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.delete-popup-content button:last-of-type {
+    background: linear-gradient(45deg, #cc0033, #ff3366);
+    color: white;
+    box-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+}
+
+.delete-popup-content button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(255, 51, 102, 0.5);
+}
+
+/* Media Queries - preserving responsive design with neon styling */
+@media (min-width: 1200px) {
+    .table {
+        width: 90%;
+    }
+    .sidebar {
+        width: 25%;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+    .table {
+        width: 75%;
+        font-size: 20px;
+    }
+    .table th, .table td{
+        padding: 15px;
+    }
+    .side_bar {
+        width: 20%;
+    }
+    .side_bar a{
+        font-size: 22px;
+    }
+    .custom-check {
+        width: 25px;
+        height: 25px;
+    }
+    .edit{
+        width: 30px;
+        height: 30px;
+        background-size: 30px;
+    }
+    .delete{
+        width: 30px;
+        height: 30px;
+        background-size: 30px;
+    }
+    .add{
+        width: 40px;
+        height: 40px;
+        background-size: 40px;
+    }
+}
+
+@media (min-width: 767px) and (max-width: 991px) {
+    .top_bar span{
+        font-size: 25px;
+    }
+    .top_bar {
+        width: 100%;
+    }
+    .table {
+        width: 80%;
+        font-size: 25px;
+    }
+    .table th, .table td {
+        padding: 12px;
+    }
+    .content {
+        width: 100%;
+    }
+    .burger-btn {
+        display: block;
+    }
+    .side_bar {
+        display: none;
+    }
+    .custom-check {
+        width: 20px;
+        height: 20px;
+    }
+    .checkbox-container input:checked + .custom-check::after {
+        width: 4px;
+        height: 6px;
+    }
+    .edit {
+        width: 30px;
+        height: 30px;
+        background-size: 30px;
+    }
+    .delete {
+        width: 30px;
+        height: 30px;
+        background-size: 30px;
+    }
+    .add {
+        width: 35px;
+        height: 35px;
+        background-size: 35px;
+    }
+    #add-popup {
+        width: 90%;
+        max-width: 90%;
+    }
+    #add-popup label {
+        font-size: 25px;
+    }
+    #add-popup span {
+        font-size: 25px;
+    }
+    .add-popup-content input, .add-popup-content select {
+        font-size: 20px;
+        padding: 10px;
+    }
+    #add-popup button.cancel, #add-popup button.proceed {
+        font-size: 25px;
+        padding: 10px;
+    }
+}
+
+@media (min-width: 576px) and (max-width: 767px) {
+    .table {
+        width: 85%;
+        font-size: 18px;
+    }
+
+    .table th, .table td {
+        padding: 8px;
+    }
+
+    .side_bar {
+        display: none;
+    }
+
+    .burger-btn {
+        display: block;
+    }
+
+    .content {
+        width: 100%;
+    }
+
+    .custom-check {
+        width: 15px;
+        height: 15px;
+    }
+
+    .checkbox-container input:checked + .custom-check::after {
+        width: 3px;
+        height: 5px;
+    }
+
+    .edit {
+        width: 15px;
+        height: 15px;
+        background-size: 15px;
+    }
+
+    .delete {
+        width: 15px
+    }
+}
+
+@media (max-width: 575px) {
+    .table {
+        width: 85%;
+        font-size: 12px;
+    }
+
+    .table th, .table td {
+        padding: 5px;
+    }
+
+    .side_bar {
+        display: none;
+    }
+
+    .burger-btn {
+        display: block;
+    }
+
+    .content {
+        width: 100%;
+    }
+
+    .top_bar span {
+        font-size: 18px;
+    }
+
+    .custom-check {
+        width: 12px;
+        height: 12px;
+    }
+
+    .checkbox-container input:checked + .custom-check::after {
+        width: 2px;
+        height: 4px;
+    }
+
+    .edit {
+        width: 12px;
+        height: 12px;
+        background-size: 12px;
+    }
+
+    .delete {
+        width: 12px;
+        height: 12px;
+        background-size: 12px;
+    }
+
+    .add {
+        width: 25px;
+        height: 25px;
+        background-size: 25px;
+    }
+
+    #add-popup {
+        width: 95%;
+        max-width: 95%;
+    }
+
+    #add-popup label {
+        font-size: 16px;
+    }
+
+    #add-popup span {
+        font-size: 16px;
+    }
+
+    .add-popup-content input, .add-popup-content select {
+        font-size: 14px;
+        padding: 5px;
+    }
+
+    #add-popup button.cancel, #add-popup button.proceed {
+        font-size: 16px;
+        padding: 8px;
+    }
+}
+
+.visually-hidden{
+    border: 0;
+    padding: 0;
+    margin: 0;
+    position: absolute !important;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+    clip: rect(1px 1px 1px 1px);
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+#window{
+    display: none;
+    position:  fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #555555;
+    background: rgba(0, 0, 0, 0.7);
+    justify-content: center;
+    align-items: center;
+}
+
+/* Стилі для невалідних полів */
+.invalid-input {
+    border: 2px solid #ff3366 !important;
+    box-shadow: 0 0 10px #ff3366 !important;
+    background-color: rgba(255, 51, 102, 0.1) !important;
+}
+
+/* Стилі для повідомлень про помилки */
+.error-message {
+    color: #ff3366;
+    font-size: 14px;
+    margin-top: 5px;
+    text-shadow: 0 0 5px rgba(255, 51, 102, 0.5);
+    animation: neonPulse 2s infinite ease-in-out;
 }
