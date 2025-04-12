@@ -208,7 +208,7 @@ function validateBirthdayField() {
   minAgeDate.setFullYear(currentDate.getFullYear() - 100);
 
   const maxAgeDate = new Date();
-  maxAgeDate.setFullYear(currentDate.getFullYear() - 10);
+  maxAgeDate.setFullYear(currentDate.getFullYear() - 15);
 
   if (selectedDate < minAgeDate) {
     showError(birthdayInput, "Age cannot be more than 100 years");
@@ -216,7 +216,7 @@ function validateBirthdayField() {
   }
 
   if (selectedDate > maxAgeDate) {
-    showError(birthdayInput, "Student must be at least 10 years old");
+    showError(birthdayInput, "Student must be at least 15 years old");
     return false;
   }
 
