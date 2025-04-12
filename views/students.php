@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>CMS</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="src/styles.css">
+    <link rel="manifest" href="manifest.json" />
+</head>
+
+<body class="students">
+<header class="top_bar">
+    <div class="left">
+        <img src="src/assets/burger.png" alt="burger menu" class="burger-btn" id="brgrbtn">
+        <a href="students.php" aria-label="CMS" class="title">CMS</a>
+    </div>
+    <div class="info">
+        <div class="notification-wrapper">
+            <a id="notification-btn" class="notification" aria-label="messages" href="messages.php" target="_blank" onclick="updateNotification()">Messages</a>
+            <div id="notifications-popup" class="popup">
+                <div class="popup-content">
+                    <div class="popup-body">
+                        <div class="notification">
+                            <div>
+                                <img src="src/assets/max.jpg" alt="profile">
+                                <p>Max Sakh</p>
+                            </div>
+                            <p>Nihao padoshva</p>
+                        </div>
+                        <div class="notification">
+                            <div>
+                                <img src="src/assets/chef.jpg" alt="profile">
+                                <p>Shef</p>
+                            </div>
+                            <p>Fortnite 16:40</p>
+                        </div>
+                        <div class="notification">
+                            <div>
+                                <img src="src/assets/yura.jpg" alt="profile">
+                                <p>Yurii Stelmakh</p>
+                            </div>
+                            <p>I'm not Grisana</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="profile-wrapper">
+            <button id="profile-btn" class="user">Profile</button>
+            <div id="profile-popup" class="popup">
+                <button>Profile</button>
+                <button>Logout</button>
+            </div>
+        </div>
+        <span class="username">Ivan Oliinyk</span>
+    </div>
+</header>
+
+<nav class="burger">
+    <a href="dashboard.php">Dashboard</a>
+    <a href="students.php" class="current">Students</a>
+    <a href="tasks.php">Tasks</a>
+</nav>
+
+<div class="content-wrapper">
+
+    <nav class="side_bar">
+        <a href="dashboard.php">Dashboard</a>
+        <a href="students.php" class="current">Students</a>
+        <a href="tasks.php">Tasks</a>
+    </nav>
+
+    <main class="content">
+        <h1>Students</h1>
+        <div class="table-wrapper">
+            <button class="add" onclick="addstudent()">Add student</button>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>
+                        <label class="checkbox-container" >
+                            <input type="checkbox" id="selectAll" class="custom-check"/>
+                            <span class="custom-check"></span>
+                            <span class="visually-hidden">Label for the input</span>
+                        </label>
+                    </th>
+                    <th>Group</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Birthday</th>
+                    <th>Status</th>
+                    <th>Options</th>
+                </tr>
+                </thead>
+                <tbody class="students-table">
+                <?php if (isset($students) && !empty($students)): ?>
+                    <?php foreach ($students as $student): ?>
+                        <tr data-id="<?php echo $student->getId(); ?>">
+                            <td>
+                                <label class="checkbox-container">
+                                    <input type="checkbox" class="student-select custom-check" data-id="<?php echo $student->getId(); ?>"/>
+                                    <span class="custom-check"></span>
+                                    <span class="visually-hidden">Select student</span>
+                                </label>
+                            </td>
+                            <td><?php echo htmlspecialchars($student->getStudentGroup()); ?></td>
+                            <td><?php echo htmlspecialchars($student->getFullName()); ?></td>
+                            <td><?php echo htmlspecialchars($student->getGender()); ?></td>
+                            <td><?php echo htmlspecialchars($student->getBirthday()); ?></td>
+                            <td><span class="status active">Active</span></td>
+                            <td>
+                                <button class="edit-btn" onclick="editStudent(<?php echo $student->getId(); ?>)">Edit</button>
+                                <button class="delete-btn" onclick="deleteStudentPrompt(<?php echo $student->getId(); ?>, '<?php echo htmlspecialchars($student->getFullName()); ?>')">Delete</button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="7">No students found</td>
+                    </tr>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Попап для підтвердження видалення -->
+        <div id="deletePopup" class="delete-popup">
+            <div class="delete-popup-content">
+                <p id="deleteMessage"></p>
+                <button onclick="confirmDelete()">Yes</button>
+                <button onclick="closePopup()">No</button>
+            </div>
+        </div>
+
+        <div class="table-pages">
+            <button class="prev"><span class="visually-hidden">Previous</span></button>
+            <button>1</button>
+            <button>2</button>
+            <button>3</button>
+            <button>4</button>
+            <button>5</button>
+            <button class="next"><span class="visually-hidden">Next</span></button>
+        </div>
+        <div id="window">
+            <div id="add-popup">
+                <span id="popup-title">Add Student</span>
+                <button id="close" onclick="addstudentclose()">Close</button>
+                <div class="add-popup-content">
+                    <input type="hidden" id="student-id">
+                    <label for="group">Group</label>
+                    <select name="group" id="group">
+                        <option value="" selected disabled></option>
+                        <optgroup label="PZ-1*">
+                            <option value="PZ-11">PZ-11</option>
+                            <option value="PZ-12">PZ-12</option>
+                            <option value="PZ-13">PZ-13</option>
+                            <option value="PZ-14">PZ-14</option>
+                            <option value="PZ-15">PZ-15</option>
+                            <option value="PZ-16">PZ-16</option>
+                            <option value="PZ-17">PZ-17</option>
+                        </optgroup>
+                        <optgroup label="PZ-2*">
+                            <option value="PZ-21">PZ-21</option>
+                            <option value="PZ-22">PZ-22</option>
+                            <option value="PZ-23">PZ-23</option>
+                            <option value="PZ-24">PZ-24</option>
+                            <option value="PZ-25">PZ-25</option>
+                            <option value="PZ-26">PZ-26</option>
+                        </optgroup>
+                        <optgroup label="PZ-3*">
+                            <option value="PZ-31">PZ-31</option>
+                            <option value="PZ-32">PZ-32</option>
+                            <option value="PZ-33">PZ-33</option>
+                            <option value="PZ-34">PZ-34</option>
+                            <option value="PZ-35">PZ-35</option>
+                            <option value="PZ-36">PZ-36</option>
+                            <option value="PZ-37">PZ-37</option>
+                        </optgroup>
+                        <optgroup label="PZ-4*">
+                            <option value="PZ-41">PZ-41</option>
+                            <option value="PZ-42">PZ-42</option>
+                            <option value="PZ-43">PZ-43</option>
+                            <option value="PZ-44">PZ-44</option>
+                            <option value="PZ-45">PZ-45</option>
+                            <option value="PZ-46">PZ-46</option>
+                        </optgroup>
+                    </select>
+                    <label for="firstname">First name</label>
+                    <input type="text" id="firstname">
+                    <label for="lastname">Last name</label>
+                    <input type="text" id="lastname">
+                    <label for="gender">Gender</label>
+                    <select id="gender">
+                        <option value="" selected disabled></option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                    <label for="birthday">Birthday</label>
+                    <input type="date" id="birthday" value="">
+                </div>
+                <div class="add-popup-buttons">
+                    <button class="cancel" onclick="addstudentcancel()">Cancel</button>
+                    <button class="proceed" id="save-student-btn">Add</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+  // Базовий URL для API запитів
+  const apiBaseUrl = '/api/students';
+  let selectedStudentId = null;
+
+  // Функція для відкриття попапа додавання студента
+  function addstudent() {
+    document.getElementById('popup-title').textContent = 'Add Student';
+    document.getElementById('student-id').value = '';
+    document.getElementById('firstname').value = '';
+    document.getElementById('lastname').value = '';
+    document.getElementById('gender').value = '';
+    document.getElementById('group').value = '';
+    document.getElementById('birthday').value = '';
+
+    // Змінюємо текст кнопки
+    document.getElementById('save-student-btn').textContent = 'Add';
+    document.getElementById('save-student-btn').onclick = createStudent;
+
+    document.getElementById('window').style.display = 'flex';
+  }
+
+  // Функція для закриття попапа
+  function addstudentclose() {
+    document.getElementById('window').style.display = 'none';
+  }
+
+  function addstudentcancel() {
+    document.getElementById('window').style.display = 'none';
+  }
+
+  // Функція для редагування студента
+  function editStudent(id) {
+    // Завантажуємо дані студента
+    fetch(`${apiBaseUrl}/${id}`)
+      .then(response => response.json())
+      .then(student => {
+        document.getElementById('popup-title').textContent = 'Edit Student';
+        document.getElementById('student-id').value = student.id;
+        document.getElementById('firstname').value = student.firstname;
+        document.getElementById('lastname').value = student.lastname;
+        document.getElementById('gender').value = student.gender;
+        document.getElementById('group').value = student.student_group;
+        document.getElementById('birthday').value = student.birthday;
+
+        // Змінюємо текст кнопки
+        document.getElementById('save-student-btn').textContent = 'Update';
+        document.getElementById('save-student-btn').onclick = updateStudent;
+
+        document.getElementById('window').style.display = 'flex';
+      })
+      .catch(error => console.error('Error loading student:', error));
+  }
+
+  // Функція для створення студента
+  function createStudent() {
+    const studentData = {
+      firstname: document.getElementById('firstname').value,
+      lastname: document.getElementById('lastname').value,
+      gender: document.getElementById('gender').value,
+      birthday: document.getElementById('birthday').value,
+      student_group: document.getElementById('group').value
+    };
+
+    fetch(apiBaseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(studentData)
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Студента успішно додано!');
+          addstudentclose();
+          // Перезавантажуємо сторінку, щоб побачити оновлений список
+          location.reload();
+        } else {
+          alert('Помилка: ' + data.error);
+        }
+      })
+      .catch(error => console.error('Error adding student:', error));
+  }
+
+  // Функція для оновлення студента
+  function updateStudent() {
+    const id = document.getElementById('student-id').value;
+    const studentData = {
+      firstname: document.getElementById('firstname').value,
+      lastname: document.getElementById('lastname').value,
+      gender: document.getElementById('gender').value,
+      birthday: document.getElementById('birthday').value,
+      student_group: document.getElementById('group').value
+    };
+
+    fetch(`${apiBaseUrl}/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(studentData)
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Студента успішно оновлено!');
+          addstudentclose();
+          // Перезавантажуємо сторінку, щоб побачити оновлений список
+          location.reload();
+        } else {
+          alert('Помилка: ' + data.error);
+        }
+      })
+      .catch(error => console.error('Error updating student:', error));
+  }
+
+  // Функція для показу попапа підтвердження видалення
+  function deleteStudentPrompt(id, name) {
+    selectedStudentId = id;
+    document.getElementById('deleteMessage').textContent = `Are you sure you want to delete student ${name}?`;
+    document.getElementById('deletePopup').style.display = 'flex';
+  }
+
+  // Функція для закриття попапа підтвердження
+  function closePopup() {
+    document.getElementById('deletePopup').style.display = 'none';
+  }
+
+  // Функція для підтвердження видалення
+  function confirmDelete() {
+    if (selectedStudentId) {
+      fetch(`${apiBaseUrl}/${selectedStudentId}`, {
+        method: 'DELETE'
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Студента успішно видалено!');
+            closePopup();
+            // Перезавантажуємо сторінку, щоб побачити оновлений список
+            location.reload();
+          } else {
+            alert('Помилка: ' + data.error);
+          }
+        })
+        .catch(error => console.error('Error deleting student:', error));
+    }
+  }
+
+  // Обробник для вибору всіх чекбоксів
+  document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.student-select');
+    checkboxes.forEach(checkbox => {
+      checkbox.checked = this.checked;
+    });
+  });
+
+  // Додаткова функціональність з original main.js
+  document.addEventListener('DOMContentLoaded', function() {
+    // Обробник для кнопки бургер-меню
+    document.getElementById('brgrbtn').addEventListener('click', function() {
+      const burger = document.querySelector('.burger');
+      burger.classList.toggle('active');
+    });
+
+    // Обробник для кнопки профілю
+    document.getElementById('profile-btn').addEventListener('click', function() {
+      const profilePopup = document.getElementById('profile-popup');
+      profilePopup.classList.toggle('active');
+    });
+
+    // Обробник для кнопки повідомлень
+    document.getElementById('notification-btn').addEventListener('click', function() {
+      const notificationsPopup = document.getElementById('notifications-popup');
+      notificationsPopup.classList.toggle('active');
+    });
+  });
+</script>
+
+<?php if(file_exists("src/main.js")): ?>
+    <script src="src/main.js"></script>
+<?php endif; ?>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register("./sw.js")
+      .then(() => console.log("Service Worker registered"))
+      .catch((err) => console.error("Service Worker registration failed", err));
+  }
+</script>
+</body>
+</html>

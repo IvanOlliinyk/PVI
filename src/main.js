@@ -5,30 +5,7 @@ const addStudentPopup = document.getElementById("add-popup");
 
 // Створюємо масив для збереження студентів
 let students = [
-  {
-    id: 1,
-    group: "PZ-25",
-    name: "Oliinyk Ivan",
-    gender: "Male",
-    birthday: "02-02-2006",
-    status: "active"
-  },
-  {
-    id: 2,
-    group: "PZ-25",
-    name: "Yurii Stelmakh",
-    gender: "Male",
-    birthday: "06-05-2006",
-    status: "inactive"
-  },
-  {
-    id: 3,
-    group: "PZ-35",
-    name: "Max Sakh",
-    gender: "Male",
-    birthday: "12-06-2005",
-    status: "inactive"
-  }
+
 ];
 
 // Функція для відображення студентів з масиву в таблиці
@@ -216,7 +193,7 @@ function validateBirthdayField() {
   }
 
   if (selectedDate > maxAgeDate) {
-    showError(birthdayInput, "Student must be at least 15 years old");
+    showError(birthdayInput, "StudentModel must be at least 15 years old");
     return false;
   }
 
@@ -309,12 +286,12 @@ function addstudent(event)
 
       // Змінюємо текст кнопки і заголовок
       proceedButton.textContent = "Save";
-      popupTitle.textContent = "Edit Student";
+      popupTitle.textContent = "Edit StudentModel";
     }
   } else {
     // Налаштовуємо для додавання нового студента
     proceedButton.textContent = "Add";
-    popupTitle.textContent = "Add Student";
+    popupTitle.textContent = "Add StudentModel";
   }
 
   // Показуємо попап
