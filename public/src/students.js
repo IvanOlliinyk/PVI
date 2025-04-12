@@ -1,0 +1,751 @@
+// Основні функції для роботи з API студентів
+const studentsApi = {
+  // Отримання всіх студентів
+  getAllStudents: async function() {
+    try {
+      const response = await fetch('/api/student_api.php', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        console.error('Error fetching students:', result.message);
+        return [];
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      return [];
+    }
+  },
+
+  // Отримання студента за ID
+  getStudentById: async function(id) {
+    try {
+      const response = await fetch(`/api/student_api.php?id=${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        console.error('Error fetching student:', result.message);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching student:', error);
+      return null;
+    }
+  },
+
+  // Додавання нового студента
+  addStudent: async function(studentData) {
+    try {
+      const response = await fetch('/api/student_api.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(studentData)
+      });
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error adding student:', error);
+      return { success: false, message: 'Network error occurred' };
+    }
+  },
+
+  // Оновлення студента
+  updateStudent: async function(studentData) {
+    try {
+      const response = await fetch('/api/student_api.php', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(studentData)
+      });
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating student:', error);
+      return { success: false, message: 'Network error occurred' };
+    }
+  },
+
+  // Видалення студента
+  deleteStudent: async function(id) {
+    try {
+      const response = await fetch('/api/student_api.php', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id })
+      });
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting student:', error);
+      return { success: false, message: 'Network error occurred' };
+    }
+  },
+
+  // Видалення кількох студентів
+  deleteMultipleStudents: async function(ids) {
+    const results = [];
+    for (const id of ids) {
+      const result = await this.deleteStudent(id);
+      results.push(result);
+    }
+    return results;
+  }
+};
+
+// Функція для очищення повідомлень про помилки
+function clearValidationErrors() {
+  const errorMessages = document.querySelectorAll(".error-message");
+  errorMessages.forEach(el => el.remove());
+
+  // Видаляємо клас invalid-input з усіх полів
+  const formFields = document.querySelectorAll(".add-popup-content input, .add-popup-content select");
+  formFields.forEach(field => field.classList.remove("invalid-input"));
+}
+
+// Функція для відображення помилок валідації
+function displayValidationErrors(errors) {
+  // Очищаємо попередні повідомлення про помилки
+  clearValidationErrors();
+
+  // Відображаємо помилки для кожного поля
+  for (const field in errors) {
+    if (field === 'duplicate') {
+      // Це особливий випадок - відображаємо помилку вгорі форми
+      const formContent = document.querySelector(".add-popup-content");
+      const errorElement = document.createElement("div");
+      errorElement.className = "error-message global-error";
+      errorElement.textContent = errors[field];
+      formContent.prepend(errorElement);
+    } else {
+      // Для інших полів відображаємо помилку біля поля
+      const inputElement = document.getElementById(field);
+      if (inputElement) {
+        inputElement.classList.add("invalid-input");
+
+        const errorElement = document.createElement("div");
+        errorElement.className = "error-message";
+        errorElement.textContent = errors[field];
+
+        inputElement.parentNode.insertBefore(errorElement, inputElement.nextSibling);
+      }
+    }
+  }
+}
+
+// Функція для форматування дати з БД у формат для відображення (YYYY-MM-DD -> DD-MM-YYYY)
+function formatDateToDisplay(dateString) {
+  if (!dateString) return '';
+
+  // Перевірка формату дати
+  try {
+    if (dateString.includes('-')) {
+      // Якщо формат YYYY-MM-DD
+      if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = dateString.split('-');
+        return `${day}-${month}-${year}`;
+      }
+      // Інакше повертаємо як є
+      return dateString;
+    }
+  } catch (e) {
+    console.error("Error formatting date:", e);
+  }
+
+  return dateString;
+}
+
+// Функція для форматування дати з формату відображення у формат для форми (YYYY-MM-DD)
+function formatDateForForm(dateString) {
+  if (!dateString) return '';
+
+  // Перевірка формату дати
+  if (dateString.includes('-')) {
+    // Якщо формат DD-MM-YYYY
+    if (dateString.match(/^\d{2}-\d{2}-\d{4}$/)) {
+      const [day, month, year] = dateString.split('-');
+      return `${year}-${month}-${day}`;
+    }
+    // Якщо формат YYYY-MM-DD, залишаємо як є
+    else if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return dateString;
+    }
+  }
+
+  return dateString;
+}
+
+// Функція для відкриття форми додавання студента
+function openAddStudentForm() {
+  const popup = document.getElementById("add-popup");
+  const proceedButton = document.querySelector("#add-popup button.proceed");
+  const popupTitle = document.querySelector("#add-popup #popup-title");
+
+  // Очищаємо попередні дані форми
+  document.getElementById("group").value = "";
+  document.getElementById("firstname").value = "";
+  document.getElementById("lastname").value = "";
+  document.getElementById("gender").value = "";
+  document.getElementById("birthday").value = "";
+  document.getElementById("student-id").value = "";
+
+  // Очищаємо повідомлення про помилки
+  clearValidationErrors();
+
+  // Налаштовуємо для додавання нового студента
+  proceedButton.textContent = "Add";
+  popupTitle.textContent = "Add Student";
+
+  // Показуємо попап
+  popup.style.visibility = "visible";
+  document.querySelector('#window').style.display = "block";
+}
+
+// Функція для закриття форми
+function closeAddStudentForm() {
+  document.getElementById("add-popup").style.visibility = "hidden";
+  document.querySelector('#window').style.display = "none";
+}
+
+// Функція для редагування студента
+async function editStudent(id) {
+  try {
+    // Перевіряємо, чи вибрано якісь чекбокси
+    const selectedCheckboxes = document.querySelectorAll('.student-select:checked');
+
+    // Якщо вибрано один чекбокс, редагуємо цього студента
+    if (selectedCheckboxes.length === 1) {
+      id = selectedCheckboxes[0].getAttribute('data-id');
+    }
+
+    // Якщо вибрано більше одного чекбоксу або id не передано, виходимо
+    if (selectedCheckboxes.length > 1 || !id) {
+      return;
+    }
+
+    // Отримуємо дані студента
+    const student = await studentsApi.getStudentById(id);
+
+    if (!student) {
+      console.error("Student not found with ID:", id);
+      return;
+    }
+
+    // Заповнюємо форму даними
+    document.getElementById("student-id").value = student.id;
+    document.getElementById("firstname").value = student.firstname;
+    document.getElementById("lastname").value = student.lastname;
+    document.getElementById("gender").value = student.gender;
+    document.getElementById("group").value = student.student_group;
+
+    // Форматуємо дату для відображення у формі
+    const birthdayForForm = formatDateForForm(student.birthday);
+    document.getElementById("birthday").value = birthdayForForm;
+
+    // Змінюємо текст кнопки і заголовок
+    document.querySelector("#add-popup button.proceed").textContent = "Save";
+    document.querySelector("#add-popup #popup-title").textContent = "Edit Student";
+
+    // Очищаємо повідомлення про помилки
+    clearValidationErrors();
+
+    // Показуємо попап
+    document.getElementById("add-popup").style.visibility = "visible";
+    document.querySelector('#window').style.display = "block";
+  } catch (error) {
+    console.error("Error loading student data for editing:", error);
+  }
+}
+
+// Функція для видалення студента - показ попапу підтвердження
+function deleteStudentPrompt(id, fullname) {
+  const popup = document.getElementById('deletePopup');
+  const message = document.getElementById('deleteMessage');
+
+  // Перевіряємо, чи вибрано чекбокси
+  const selectedCheckboxes = document.querySelectorAll('.student-select:checked');
+
+  if (selectedCheckboxes.length === 0 && id) {
+    // Видалення через кнопку видалення - отримуємо ім'я студента
+    message.textContent = `Are you sure you want to delete "${fullname}"?`;
+    // Зберігаємо посилання на ID студента
+    popup.setAttribute("data-delete-id", id);
+  } else if (selectedCheckboxes.length > 0) {
+    // Видалення декількох вибраних студентів
+    const studentIds = Array.from(selectedCheckboxes).map(checkbox =>
+      checkbox.getAttribute('data-id')
+    );
+
+    // Отримуємо імена вибраних студентів для повідомлення
+    const selectedNames = [];
+    studentIds.forEach(id => {
+      const row = document.querySelector(`tr[data-id="${id}"]`);
+      if (row) {
+        const nameCell = row.cells[2]; // Третя колонка з іменем
+        if (nameCell) {
+          selectedNames.push(nameCell.textContent.trim());
+        }
+      }
+    });
+
+    const namesText = selectedNames.join(', ');
+    message.textContent = `Are you sure you want to delete "${namesText}"?`;
+
+    // Зберігаємо посилання на ID студентів
+    popup.setAttribute("data-delete-ids", JSON.stringify(studentIds));
+  } else {
+    message.textContent = 'No students selected for deletion.';
+  }
+
+  popup.style.display = 'block';
+  document.querySelector('#window').style.display = "block";
+}
+
+// Функція підтвердження видалення
+async function confirmDelete() {
+  const popup = document.getElementById('deletePopup');
+
+  // Перевіряємо, чи видаляємо декількох студентів
+  const deleteIds = popup.getAttribute("data-delete-ids");
+  if (deleteIds) {
+    const ids = JSON.parse(deleteIds);
+
+    try {
+      // Видаляємо студентів
+      const results = await studentsApi.deleteMultipleStudents(ids);
+
+      // Перевіряємо, чи всі студенти успішно видалені
+      const allSuccessful = results.every(r => r.success);
+
+      if (allSuccessful) {
+        // Виводимо дату і час у спеціальному форматі
+        console.log(`Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): ${getCurrentDateTime()}`);
+        console.log(`Current User's Login: ${getCurrentUser()}`);
+      } else {
+        console.error("Error deleting some students");
+      }
+
+      // Оновлюємо таблицю
+      loadStudents();
+    } catch (error) {
+      console.error("Error deleting students:", error);
+    }
+  } else {
+    // Видаляємо одного студента
+    const deleteId = popup.getAttribute("data-delete-id");
+    if (deleteId) {
+      try {
+        const result = await studentsApi.deleteStudent(deleteId);
+
+        if (result.success) {
+          // Виводимо дату і час у спеціальному форматі
+          console.log(`Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): ${getCurrentDateTime()}`);
+          console.log(`Current User's Login: ${getCurrentUser()}`);
+
+          loadStudents();
+        } else {
+          console.error("Error deleting student:", result.message);
+        }
+      } catch (error) {
+        console.error("Error in confirmDelete:", error);
+      }
+    }
+  }
+
+  // Очищаємо атрибути
+  popup.removeAttribute("data-delete-id");
+  popup.removeAttribute("data-delete-ids");
+
+  // Закриваємо попап
+  closeDeletePopup();
+}
+
+// Функція для закриття попапу видалення
+function closeDeletePopup() {
+  const popup = document.getElementById('deletePopup');
+  popup.style.display = 'none';
+  document.querySelector('#window').style.display = "none";
+}
+
+// Клієнтська валідація форми
+function validateForm() {
+  const firstName = document.getElementById("firstname").value.trim();
+  const lastName = document.getElementById("lastname").value.trim();
+  const group = document.getElementById("group").value;
+  const gender = document.getElementById("gender").value;
+  const birthday = document.getElementById("birthday").value;
+
+  // Очищаємо попередні повідомлення про помилки
+  clearValidationErrors();
+
+  let isValid = true;
+
+  // Базова клієнтська валідація
+  if (!firstName) {
+    showError(document.getElementById("firstname"), "First name is required");
+    isValid = false;
+  } else if (!/^[A-Za-zА-Яа-яЁёЇїІіЄєҐґ' -]+$/.test(firstName)) {
+    showError(document.getElementById("firstname"), "First name can only contain letters, spaces, hyphens and apostrophes");
+    isValid = false;
+  }
+
+  if (!lastName) {
+    showError(document.getElementById("lastname"), "Last name is required");
+    isValid = false;
+  } else if (!/^[A-Za-zА-Яа-яЁёЇїІіЄєҐґ' -]+$/.test(lastName)) {
+    showError(document.getElementById("lastname"), "Last name can only contain letters, spaces, hyphens and apostrophes");
+    isValid = false;
+  }
+
+  if (!group) {
+    showError(document.getElementById("group"), "Please select group");
+    isValid = false;
+  }
+
+  if (!gender) {
+    showError(document.getElementById("gender"), "Please select gender");
+    isValid = false;
+  }
+
+  if (!birthday) {
+    showError(document.getElementById("birthday"), "Birthday is required");
+    isValid = false;
+  } else {
+    const selectedDate = new Date(birthday);
+    const currentDate = new Date();
+
+    if (selectedDate > currentDate) {
+      showError(document.getElementById("birthday"), "Birthday cannot be in the future");
+      isValid = false;
+    }
+
+    const minAgeDate = new Date();
+    minAgeDate.setFullYear(currentDate.getFullYear() - 100);
+
+    const maxAgeDate = new Date();
+    maxAgeDate.setFullYear(currentDate.getFullYear() - 15);
+
+    if (selectedDate < minAgeDate) {
+      showError(document.getElementById("birthday"), "Age cannot be more than 100 years");
+      isValid = false;
+    }
+
+    if (selectedDate > maxAgeDate) {
+      showError(document.getElementById("birthday"), "Student must be at least 15 years old");
+      isValid = false;
+    }
+  }
+
+  return isValid;
+}
+
+// Функція для відображення помилки біля поля
+function showError(element, message) {
+  element.classList.add("invalid-input");
+
+  const errorElement = document.createElement("div");
+  errorElement.className = "error-message";
+  errorElement.textContent = message;
+
+  element.parentNode.insertBefore(errorElement, element.nextSibling);
+}
+
+// Функція для збереження/додавання студента
+async function saveStudent() {
+  // Спочатку валідуємо форму на клієнті
+  if (!validateForm()) {
+    return;
+  }
+
+  const studentId = document.getElementById("student-id").value;
+  const firstName = document.getElementById("firstname").value.trim();
+  const lastName = document.getElementById("lastname").value.trim();
+  const group = document.getElementById("group").value.trim();
+  const gender = document.getElementById("gender").value.trim();
+  const birthdayValue = document.getElementById("birthday").value.trim();
+
+  // Підготовка даних студента
+  const studentData = {
+    firstname: firstName,
+    lastname: lastName,
+    gender: gender,
+    birthday: birthdayValue,
+    student_group: group
+  };
+
+  try {
+    let result;
+
+    if (studentId) {
+      // Оновлюємо існуючого студента
+      studentData.id = studentId;
+      result = await studentsApi.updateStudent(studentData);
+    } else {
+      // Додаємо нового студента
+      result = await studentsApi.addStudent(studentData);
+    }
+
+    if (result.success) {
+      // Записуємо в логи в консоль дані про час та користувача
+      console.log(`Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): ${getCurrentDateTime()}`);
+      console.log(`Current User's Login: ${getCurrentUser()}`);
+
+      // Оновлюємо таблицю і закриваємо форму
+      loadStudents();
+      closeAddStudentForm();
+    } else {
+      // Відображаємо помилки валідації від сервера
+      if (result.errors) {
+        displayValidationErrors(result.errors);
+      } else {
+        console.error("Error saving student:", result.message);
+      }
+    }
+  } catch (error) {
+    console.error("Error in saveStudent function:", error);
+  }
+}
+
+// Функція для завантаження студентів з сервера
+async function loadStudents() {
+  const students = await studentsApi.getAllStudents();
+  renderStudentsTable(students);
+}
+
+// Функція для відображення студентів у таблиці
+function renderStudentsTable(students) {
+  const tbody = document.querySelector(".students-table");
+  tbody.innerHTML = "";
+
+  if (!students || students.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7">No students found</td></tr>';
+    return;
+  }
+
+  students.forEach(student => {
+    const formattedBirthday = formatDateToDisplay(student.birthday);
+
+    tbody.insertAdjacentHTML("beforeend", `
+            <tr data-id="${student.id}">
+                <td>
+                    <label class="checkbox-container">
+                        <input type="checkbox" class="student-select custom-check" data-id="${student.id}"/>
+                        <span class="custom-check"></span>
+                        <span class="visually-hidden">Select student</span>
+                    </label>
+                </td>
+                <td>${student.student_group || ""}</td>
+                <td>${student.fullname || ""}</td>
+                <td>${student.gender || ""}</td>
+                <td>${formattedBirthday}</td>
+                <td><div class="active"></div></td>
+                <td>
+                    <button class="edit" aria-label="Edit" onclick="editStudent(${student.id})"></button>
+                    <button class="delete" aria-label="Delete" onclick="deleteStudentPrompt(${student.id}, '${(student.fullname || "").replace(/'/g, "\\'")}')"></button>
+                </td>
+            </tr>
+        `);
+  });
+
+  // Оновлюємо обробники чекбоксів
+  updateCheckboxes();
+}
+
+// Функція для оновлення обробників подій чекбоксів
+function updateCheckboxes() {
+  const selectAllCheckbox = document.getElementById('selectAll');
+  const studentCheckboxes = document.querySelectorAll('.student-select');
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      studentCheckboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+      toggleEditButtons();
+    });
+  }
+
+  studentCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      if (!this.checked && selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+      } else if (selectAllCheckbox &&
+        Array.from(studentCheckboxes).every(cb => cb.checked)) {
+        selectAllCheckbox.checked = true;
+      }
+      toggleEditButtons();
+    });
+  });
+}
+
+// Функція для ввімкнення/вимкнення кнопок редагування
+function toggleEditButtons() {
+  const studentCheckboxes = document.querySelectorAll('.student-select:checked');
+  const editButtons = document.querySelectorAll('.edit');
+
+  // Якщо вибрано більше одного чекбоксу, вимикаємо кнопки редагування
+  if (studentCheckboxes.length > 1) {
+    editButtons.forEach(button => {
+      button.disabled = true;
+      button.style.opacity = "0.5";
+      button.style.cursor = "not-allowed";
+    });
+  } else {
+    // Інакше робимо всі кнопки активними
+    editButtons.forEach(button => {
+      button.disabled = false;
+      button.style.opacity = "";
+      button.style.cursor = "";
+    });
+  }
+}
+
+// Завантажуємо студентів при завантаженні сторінки
+document.addEventListener("DOMContentLoaded", function() {
+  // Завантажуємо студентів
+  loadStudents();
+
+  // Налаштовуємо обробники подій для форми
+  setupFormHandlers();
+});
+
+// Функція для налаштування обробників подій форми
+function setupFormHandlers() {
+  // Кнопка додавання студента
+  const addButton = document.querySelector("button.add");
+  if (addButton) {
+    addButton.addEventListener("click", openAddStudentForm);
+  }
+
+  // Кнопка збереження студента (Add/Save)
+  const saveButton = document.getElementById("save-student-btn");
+  if (saveButton) {
+    saveButton.addEventListener("click", function(e) {
+      e.preventDefault();
+      saveStudent();
+    });
+  }
+
+  // Кнопки закриття форми
+  const closeButton = document.getElementById("close");
+  if (closeButton) {
+    closeButton.addEventListener("click", closeAddStudentForm);
+  }
+
+  const cancelButton = document.querySelector(".add-popup-buttons .cancel");
+  if (cancelButton) {
+    cancelButton.addEventListener("click", closeAddStudentForm);
+  }
+
+  // Налаштування обробників для кнопок видалення
+  const yesDeleteBtn = document.querySelector("#deletePopup button:nth-child(1)");
+  if (yesDeleteBtn) {
+    yesDeleteBtn.addEventListener("click", confirmDelete);
+  }
+
+  const noDeleteBtn = document.querySelector("#deletePopup button:nth-child(2)");
+  if (noDeleteBtn) {
+    noDeleteBtn.addEventListener("click", closeDeletePopup);
+  }
+
+  // Додаємо обробники подій для валідації полів форми в реальному часі
+  document.getElementById("firstname").addEventListener("input", function() {
+    const errorElement = this.nextElementSibling;
+    if (errorElement && errorElement.classList.contains("error-message")) {
+      errorElement.remove();
+    }
+    this.classList.remove("invalid-input");
+  });
+
+  document.getElementById("lastname").addEventListener("input", function() {
+    const errorElement = this.nextElementSibling;
+    if (errorElement && errorElement.classList.contains("error-message")) {
+      errorElement.remove();
+    }
+    this.classList.remove("invalid-input");
+  });
+
+  document.getElementById("group").addEventListener("change", function() {
+    const errorElement = this.nextElementSibling;
+    if (errorElement && errorElement.classList.contains("error-message")) {
+      errorElement.remove();
+    }
+    this.classList.remove("invalid-input");
+  });
+
+  document.getElementById("gender").addEventListener("change", function() {
+    const errorElement = this.nextElementSibling;
+    if (errorElement && errorElement.classList.contains("error-message")) {
+      errorElement.remove();
+    }
+    this.classList.remove("invalid-input");
+  });
+
+  document.getElementById("birthday").addEventListener("change", function() {
+    const errorElement = this.nextElementSibling;
+    if (errorElement && errorElement.classList.contains("error-message")) {
+      errorElement.remove();
+    }
+    this.classList.remove("invalid-input");
+  });
+}
+
+// Додаємо функції для роботи з повідомленнями і бічним меню
+function updateNotification() {
+  const notification = document.querySelector("#notification-btn.notification");
+  if (notification) {
+    notification.style.backgroundImage = "url(src/assets/bell.png)";
+  }
+}
+
+// Додаємо обробник для кнопки бургер-меню
+document.addEventListener('DOMContentLoaded', function() {
+  const burgerBtn = document.getElementById('brgrbtn');
+  if (burgerBtn) {
+    burgerBtn.addEventListener('click', () => {
+      const burger = document.querySelector(".burger");
+      if (burger.style.display === 'flex') {
+        burger.style.display = 'none';
+      } else {
+        burger.style.display = 'flex';
+      }
+    });
+  }
+});
+
+// Функція для отримання поточної дати і часу у форматі UTC (YYYY-MM-DD HH:MM:SS)
+function getCurrentDateTime() {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(now.getUTCDate()).padStart(2, '0');
+  const hours = String(now.getUTCHours()).padStart(2, '0');
+  const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+// Функція для отримання поточного користувача
+function getCurrentUser() {
+  // В реальному додатку це може бути взято з сесії або API
+  return "IvanOlliinyk";
+}

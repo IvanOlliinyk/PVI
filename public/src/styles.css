@@ -1215,3 +1215,13 @@ body {
     text-shadow: 0 0 5px rgba(255, 51, 102, 0.5);
     animation: neonPulse 2s infinite ease-in-out;
 }
+
+/* Стилі для глобальних повідомлень помилок (дублікати студентів) */
+.global-error {
+    background-color: #ffefef;
+    border: 1px solid #ff3860;
+    padding: 8px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    font-weight: bold;
+}

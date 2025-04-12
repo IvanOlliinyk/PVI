@@ -127,7 +127,7 @@
       <div class="delete-popup-content">
         <p id="deleteMessage"></p>
         <button onclick="confirmDelete()">Yes</button>
-        <button onclick="closePopup()">No</button>
+        <button onclick="closeDeletePopup()">No</button>
       </div>
     </div>
 
@@ -212,14 +212,7 @@
 <?php if(file_exists("src/main.js")): ?>
   <script src="/public/src/main.js"></script>
 <?php endif; ?>
+<script src="/public/src/students.js"></script>
 
-<script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker
-      .register("./sw.js")
-      .then(() => console.log("Service Worker registered"))
-      .catch((err) => console.error("Service Worker registration failed", err));
-  }
-</script>
 </body>
 </html>
