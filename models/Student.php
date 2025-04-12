@@ -9,12 +9,12 @@ class Student {
 
     // Конструктор
     public function __construct($data = []) {
-        $this->id = isset($data['id']) ? $data['id'] : null;
-        $this->firstname = isset($data['firstname']) ? $data['firstname'] : '';
-        $this->lastname = isset($data['lastname']) ? $data['lastname'] : '';
-        $this->gender = isset($data['gender']) ? $data['gender'] : '';
-        $this->birthday = isset($data['birthday']) ? $data['birthday'] : '';
-        $this->student_group = isset($data['student_group']) ? $data['student_group'] : '';
+        $this->id = $data['id'] ?? null;
+        $this->firstname = $data['firstname'] ?? '';
+        $this->lastname = $data['lastname'] ?? '';
+        $this->gender = $data['gender'] ?? '';
+        $this->birthday = $data['birthday'] ?? '';
+        $this->student_group = $data['student_group'] ?? '';
     }
 
     // Геттери

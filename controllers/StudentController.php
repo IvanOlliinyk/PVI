@@ -14,7 +14,7 @@ class StudentController {
         $students = $this->studentModel->getAllStudents();
 
         // Підключаємо відображення та передаємо йому дані
-        require_once 'views/index.php';
+        require_once 'views/students/index.php';
     }
 
     // Додаткові методи (для додавання, редагування, видалення)
