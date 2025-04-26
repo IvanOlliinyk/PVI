@@ -133,11 +133,11 @@
 
     <div class="table-pages">
       <button class="prev"><span class="visually-hidden">Previous</span></button>
-      <button>1</button>
-      <button>2</button>
-      <button>3</button>
-      <button>4</button>
-      <button>5</button>
+      <button class="num">1</button>
+      <button class="num">2</button>
+      <button class="num">3</button>
+      <button class="num">4</button>
+      <button class="num">5</button>
       <button class="next"><span class="visually-hidden">Next</span></button>
     </div>
     <div id="window">

@@ -111,6 +111,12 @@ const studentsApi = {
   }
 };
 
+// Змінні для пагінації
+let currentPage = 1;
+const studentsPerPage = 5;
+let totalStudents = [];
+let totalPages = 1;
+
 // Функція для очищення повідомлень про помилки
 function clearValidationErrors() {
   const errorMessages = document.querySelectorAll(".error-message");
@@ -527,20 +533,36 @@ async function saveStudent() {
 // Функція для завантаження студентів з сервера
 async function loadStudents() {
   const students = await studentsApi.getAllStudents();
-  renderStudentsTable(students);
+  totalStudents = students;
+  totalPages = Math.ceil(students.length / studentsPerPage);
+
+  // Перевіряємо, чи не вийшла поточна сторінка за межі після видалення
+  if (currentPage > totalPages && totalPages > 0) {
+    currentPage = totalPages;
+  } else if (totalPages === 0) {
+    currentPage = 1;
+  }
+
+  renderStudentsTable();
+  updatePaginationButtons();
 }
 
 // Функція для відображення студентів у таблиці
-function renderStudentsTable(students) {
+function renderStudentsTable() {
   const tbody = document.querySelector(".students-table");
   tbody.innerHTML = "";
 
-  if (!students || students.length === 0) {
+  if (!totalStudents || totalStudents.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7">No students found</td></tr>';
     return;
   }
 
-  students.forEach(student => {
+  // Обчислюємо студентів для поточної сторінки
+  const startIndex = (currentPage - 1) * studentsPerPage;
+  const endIndex = Math.min(startIndex + studentsPerPage, totalStudents.length);
+  const currentPageStudents = totalStudents.slice(startIndex, endIndex);
+
+  currentPageStudents.forEach(student => {
     const formattedBirthday = formatDateToDisplay(student.birthday);
 
     tbody.insertAdjacentHTML("beforeend", `
@@ -569,13 +591,71 @@ function renderStudentsTable(students) {
   updateCheckboxes();
 }
 
+// Функція для оновлення кнопок пагінації
+function updatePaginationButtons() {
+  const paginationContainer = document.querySelector(".table-pages");
+  paginationContainer.innerHTML = "";
+
+  // Кнопка "Назад"
+  const prevButton = document.createElement("button");
+  prevButton.classList.add("prev");
+  prevButton.innerHTML = '<span class="visually-hidden">Previous</span>';
+  prevButton.disabled = currentPage === 1;
+  prevButton.addEventListener("click", () => goToPage(currentPage - 1));
+  paginationContainer.appendChild(prevButton);
+
+  // Кнопки з номерами сторінок
+  // Визначаємо діапазон кнопок для відображення
+  const maxVisibleButtons = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisibleButtons / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisibleButtons - 1);
+
+  if (endPage - startPage < maxVisibleButtons - 1) {
+    startPage = Math.max(1, endPage - maxVisibleButtons + 1);
+  }
+
+  for (let i = startPage; i <= endPage; i++) {
+    const pageButton = document.createElement("button");
+    pageButton.textContent = i;
+    if (i === currentPage) {
+      pageButton.classList.add("active");
+    }
+    pageButton.addEventListener("click", () => goToPage(i));
+    paginationContainer.appendChild(pageButton);
+  }
+
+  // Кнопка "Вперед"
+  const nextButton = document.createElement("button");
+  nextButton.classList.add("next");
+  nextButton.innerHTML = '<span class="visually-hidden">Next</span>';
+  nextButton.disabled = currentPage === totalPages || totalPages === 0;
+  nextButton.addEventListener("click", () => goToPage(currentPage + 1));
+  paginationContainer.appendChild(nextButton);
+}
+
+// Функція для переходу на певну сторінку
+function goToPage(page) {
+  if (page < 1 || page > totalPages) {
+    return;
+  }
+
+  currentPage = page;
+  renderStudentsTable();
+  updatePaginationButtons();
+}
+
 // Функція для оновлення обробників подій чекбоксів
 function updateCheckboxes() {
   const selectAllCheckbox = document.getElementById('selectAll');
   const studentCheckboxes = document.querySelectorAll('.student-select');
 
   if (selectAllCheckbox) {
-    selectAllCheckbox.addEventListener('change', function() {
+    // Очищаємо попередні обробники
+    const newSelectAllCheckbox = selectAllCheckbox.cloneNode(true);
+    selectAllCheckbox.parentNode.replaceChild(newSelectAllCheckbox, selectAllCheckbox);
+
+    // Додаємо новий обробник
+    newSelectAllCheckbox.addEventListener('change', function() {
       studentCheckboxes.forEach(checkbox => {
         checkbox.checked = this.checked;
       });
@@ -584,11 +664,16 @@ function updateCheckboxes() {
   }
 
   studentCheckboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
+    // Очищаємо попередні обробники
+    const newCheckbox = checkbox.cloneNode(true);
+    checkbox.parentNode.replaceChild(newCheckbox, checkbox);
+
+    // Додаємо новий обробник
+    newCheckbox.addEventListener('change', function() {
       if (!this.checked && selectAllCheckbox) {
         selectAllCheckbox.checked = false;
       } else if (selectAllCheckbox &&
-        Array.from(studentCheckboxes).every(cb => cb.checked)) {
+        Array.from(document.querySelectorAll('.student-select')).every(cb => cb.checked)) {
         selectAllCheckbox.checked = true;
       }
       toggleEditButtons();
