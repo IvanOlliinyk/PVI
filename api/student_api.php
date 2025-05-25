@@ -11,6 +11,25 @@ $pdo = getDbConnection();
 // Створити екземпляр моделі студента
 $studentModel = new StudentModel($pdo);
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Перевірка авторизації для всіх запитів крім GET-запиту з action=public
+if (!isset($_SESSION['user_id'])) {
+    // Перевіряємо, чи це публічно доступний маршрут
+    $isPublicRoute = ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'public');
+
+    if (!$isPublicRoute) {
+        http_response_code(401); // Unauthorized
+        echo json_encode([
+            'success' => false,
+            'message' => 'Для доступу до цього API необхідно авторизуватися'
+        ]);
+        exit;
+    }
+}
+
 // Запис у лог про дату та користувача
 function logActivity($action) {
     $date = gmdate('Y-m-d H:i:s');
@@ -112,6 +131,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
+
         // Отримання студентів
         if (isset($_GET['id'])) {
             // Отримання конкретного студента за ID
@@ -127,18 +147,21 @@ switch ($method) {
                         'fullname' => $student->getFullName(),
                         'gender' => $student->getGender(),
                         'birthday' => $student->getBirthday(),
-                        'student_group' => $student->getStudentGroup()
+                        'student_group' => $student->getStudentGroup(),
+                        'user_id' => $student->getUserId() // Додаємо user_id у відповідь
                     ]
                 ]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Student not found']);
             }
         } else {
-            // Отримання всіх студентів
             $students = $studentModel->getAllStudents();
             $result = [];
 
             foreach ($students as $student) {
+                // Явно конвертуємо user_id в число, якщо він не null
+                $userId = $student->getUserId() !== null ? (int)$student->getUserId() : null;
+
                 $result[] = [
                     'id' => $student->getId(),
                     'firstname' => $student->getFirstname(),
@@ -146,7 +169,8 @@ switch ($method) {
                     'fullname' => $student->getFullName(),
                     'gender' => $student->getGender(),
                     'birthday' => $student->getBirthday(),
-                    'student_group' => $student->getStudentGroup()
+                    'student_group' => $student->getStudentGroup(),
+                    'user_id' => $userId  // Використовуємо перетворену змінну
                 ];
             }
 
@@ -166,13 +190,22 @@ switch ($method) {
             exit;
         }
 
-        // Створення студента
+        // Встановлюємо user_id поточного користувача
+        $user_id = isset($data['user_id']) ? $data['user_id'] : null;
+
+        // Якщо не передали user_id, але користувач авторизований, використовуємо ID з сесії
+        if (!$user_id && isset($_SESSION['user_id'])) {
+            $user_id = $_SESSION['user_id'];
+        }
+
+        // Створення студента з user_id
         $student = new Student([
             'firstname' => $data['firstname'],
             'lastname' => $data['lastname'],
             'gender' => $data['gender'],
             'birthday' => $data['birthday'],
-            'student_group' => $data['student_group']
+            'student_group' => $data['student_group'],
+            'user_id' => $user_id // Додаємо user_id
         ]);
 
         // Додавання студента
@@ -205,6 +238,20 @@ switch ($method) {
             exit;
         }
 
+        // Встановлюємо user_id поточного користувача або зберігаємо існуючий
+        $user_id = isset($data['user_id']) ? $data['user_id'] : null;
+
+        // Якщо не передали user_id, але користувач авторизований, використовуємо ID з сесії
+        if (!$user_id && isset($_SESSION['user_id'])) {
+            $user_id = $_SESSION['user_id'];
+        } else if (!$user_id) {
+            // Зберігаємо поточний user_id, якщо він є
+            $currentStudent = $studentModel->getStudentById($data['id']);
+            if ($currentStudent) {
+                $user_id = $currentStudent->getUserId();
+            }
+        }
+
         // Створення студента
         $student = new Student([
             'id' => $data['id'],
@@ -212,7 +259,8 @@ switch ($method) {
             'lastname' => $data['lastname'],
             'gender' => $data['gender'],
             'birthday' => $data['birthday'],
-            'student_group' => $data['student_group']
+            'student_group' => $data['student_group'],
+            'user_id' => $user_id // Додаємо user_id
         ]);
 
         // Оновлення студента
@@ -267,4 +315,3 @@ switch ($method) {
         echo json_encode(['success' => false, 'message' => 'Method not allowed']);
         break;
 }
-?>

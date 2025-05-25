@@ -1,107 +1,85 @@
 <?php
-require_once 'Student.php';
 
+require_once __DIR__ . '/Student.php';
 class StudentModel {
+
+
     private $pdo;
 
     public function __construct($pdo) {
         $this->pdo = $pdo;
     }
 
-    // Отримання всіх студентів
+    // Метод для отримання всіх студентів
     public function getAllStudents() {
-        try {
-            $stmt = $this->pdo->query('SELECT * FROM students ORDER BY lastname, firstname');
-            $studentsData = $stmt->fetchAll();
+        $stmt = $this->pdo->query('SELECT * FROM students');
+        $students = [];
 
-            $students = [];
-            foreach ($studentsData as $studentData) {
-                $students[] = new Student($studentData);
-            }
-
-            return $students;
-        } catch (PDOException $e) {
-            die("Помилка отримання даних студентів: " . $e->getMessage());
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $students[] = new Student($row);
         }
+
+        return $students;
     }
 
-    // Отримання студента за ID
+    // Метод для отримання студента за ID
     public function getStudentById($id) {
-        try {
-            $stmt = $this->pdo->prepare('SELECT * FROM students WHERE id = :id');
-            $stmt->execute(['id' => $id]);
-            $studentData = $stmt->fetch();
+        $stmt = $this->pdo->prepare('SELECT * FROM students WHERE id = ?');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($studentData) {
-                return new Student($studentData);
-            }
-
+        if (!$row) {
             return null;
-        } catch (PDOException $e) {
-            die("Помилка отримання даних студента: " . $e->getMessage());
         }
+
+        return new Student($row);
     }
 
-    // Додавання нового студента
+    // Метод для додавання студента (з user_id)
     public function addStudent(Student $student) {
-        try {
-            $stmt = $this->pdo->prepare(
-                'INSERT INTO students (firstname, lastname, gender, birthday, student_group) 
-                 VALUES (:firstname, :lastname, :gender, :birthday, :student_group)'
-            );
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO students (firstname, lastname, gender, birthday, student_group, user_id) 
+             VALUES (?, ?, ?, ?, ?, ?)'
+        );
 
-            $result = $stmt->execute([
-                'firstname' => $student->getFirstname(),
-                'lastname' => $student->getLastname(),
-                'gender' => $student->getGender(),
-                'birthday' => $student->getBirthday(),
-                'student_group' => $student->getStudentGroup()
-            ]);
-
-            return $result;
-        } catch (PDOException $e) {
-            die("Помилка додавання студента: " . $e->getMessage());
-        }
+        return $stmt->execute([
+            $student->getFirstname(),
+            $student->getLastname(),
+            $student->getGender(),
+            $student->getBirthday(),
+            $student->getStudentGroup(),
+            $student->getUserId()  // Додаємо user_id
+        ]);
     }
 
-    // Оновлення даних студента
+    // Метод для оновлення студента (з user_id)
     public function updateStudent(Student $student) {
-        try {
-            $stmt = $this->pdo->prepare(
-                'UPDATE students 
-                 SET firstname = :firstname, 
-                     lastname = :lastname, 
-                     gender = :gender, 
-                     birthday = :birthday, 
-                     student_group = :student_group 
-                 WHERE id = :id'
-            );
+        $stmt = $this->pdo->prepare(
+            'UPDATE students SET 
+             firstname = ?, 
+             lastname = ?, 
+             gender = ?, 
+             birthday = ?, 
+             student_group = ?,
+             user_id = ?
+             WHERE id = ?'
+        );
 
-            $result = $stmt->execute([
-                'id' => $student->getId(),
-                'firstname' => $student->getFirstname(),
-                'lastname' => $student->getLastname(),
-                'gender' => $student->getGender(),
-                'birthday' => $student->getBirthday(),
-                'student_group' => $student->getStudentGroup()
-            ]);
-
-            return $result;
-        } catch (PDOException $e) {
-            die("Помилка оновлення даних студента: " . $e->getMessage());
-        }
+        return $stmt->execute([
+            $student->getFirstname(),
+            $student->getLastname(),
+            $student->getGender(),
+            $student->getBirthday(),
+            $student->getStudentGroup(),
+            $student->getUserId(),  // Додаємо user_id
+            $student->getId()
+        ]);
     }
 
-    // Видалення студента
+    // Метод для видалення студента
     public function deleteStudent($id) {
-        try {
-            $stmt = $this->pdo->prepare('DELETE FROM students WHERE id = :id');
-            $result = $stmt->execute(['id' => $id]);
-
-            return $result;
-        } catch (PDOException $e) {
-            die("Помилка видалення студента: " . $e->getMessage());
-        }
+        $stmt = $this->pdo->prepare('DELETE FROM students WHERE id = ?');
+        return $stmt->execute([$id]);
     }
 }
 ?>

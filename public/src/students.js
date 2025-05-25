@@ -49,6 +49,8 @@ const studentsApi = {
   // Додавання нового студента
   addStudent: async function(studentData) {
     try {
+      console.log("Початок запиту на додавання студента з даними:", studentData);
+
       const response = await fetch('/api/student_api.php', {
         method: 'POST',
         headers: {
@@ -57,10 +59,25 @@ const studentsApi = {
         body: JSON.stringify(studentData)
       });
 
-      return await response.json();
+      const responseText = await response.text();
+      console.log("Сирий текст відповіді:", responseText);
+
+      // Перевіряємо, чи відповідь є валідним JSON
+      try {
+        const result = JSON.parse(responseText);
+        console.log("Результат додавання студента:", result);
+        return result;
+      } catch (jsonError) {
+        console.error("Помилка парсингу JSON відповіді:", jsonError);
+        return {
+          success: false,
+          message: 'Отримано некоректну відповідь від сервера',
+          rawResponse: responseText
+        };
+      }
     } catch (error) {
-      console.error('Error adding student:', error);
-      return { success: false, message: 'Network error occurred' };
+      console.error('Помилка мережі при додаванні студента:', error);
+      return { success: false, message: 'Сталася помилка мережі: ' + error.message };
     }
   },
 
@@ -488,13 +505,18 @@ async function saveStudent() {
   const gender = document.getElementById("gender").value.trim();
   const birthdayValue = document.getElementById("birthday").value.trim();
 
+  // Отримуємо ID поточного користувача
+  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const currentUserId = currentUser.id;
+
   // Підготовка даних студента
   const studentData = {
     firstname: firstName,
     lastname: lastName,
     gender: gender,
     birthday: birthdayValue,
-    student_group: group
+    student_group: group,
+    user_id: currentUserId  // Додаємо user_id поточного користувача
   };
 
   try {
@@ -523,10 +545,13 @@ async function saveStudent() {
         displayValidationErrors(result.errors);
       } else {
         console.error("Error saving student:", result.message);
+        // Показуємо загальну помилку
+        alert("Error saving student: " + (result.message || "Unknown error"));
       }
     }
   } catch (error) {
     console.error("Error in saveStudent function:", error);
+    alert("Network error while saving student");
   }
 }
 
@@ -548,6 +573,9 @@ async function loadStudents() {
 }
 
 // Функція для відображення студентів у таблиці
+// Функція для відображення студентів у таблиці
+// Функція для відображення студентів у таблиці
+// Функція для відображення студентів у таблиці
 function renderStudentsTable() {
   const tbody = document.querySelector(".students-table");
   tbody.innerHTML = "";
@@ -557,6 +585,13 @@ function renderStudentsTable() {
     return;
   }
 
+  // Отримуємо дані поточного користувача
+  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const currentFirstName = currentUser.firstname?.toLowerCase();
+  const currentLastName = currentUser.lastname?.toLowerCase();
+
+  console.log(`Поточний користувач: ${currentFirstName} ${currentLastName}`);
+
   // Обчислюємо студентів для поточної сторінки
   const startIndex = (currentPage - 1) * studentsPerPage;
   const endIndex = Math.min(startIndex + studentsPerPage, totalStudents.length);
@@ -565,26 +600,38 @@ function renderStudentsTable() {
   currentPageStudents.forEach(student => {
     const formattedBirthday = formatDateToDisplay(student.birthday);
 
+    // Порівнюємо ім'я та прізвище поточного користувача з даними студента
+    const studentFirstName = student.firstname?.toLowerCase();
+    const studentLastName = student.lastname?.toLowerCase();
+
+    const isActive = currentFirstName && currentLastName &&
+      studentFirstName === currentFirstName &&
+      studentLastName === currentLastName;
+
+    console.log(`Студент: ${studentFirstName} ${studentLastName}, Активний: ${isActive}`);
+
+    const statusClass = isActive ? 'active' : 'inactive';
+
     tbody.insertAdjacentHTML("beforeend", `
-            <tr data-id="${student.id}">
-                <td>
-                    <label class="checkbox-container">
-                        <input type="checkbox" class="student-select custom-check" data-id="${student.id}"/>
-                        <span class="custom-check"></span>
-                        <span class="visually-hidden">Select student</span>
-                    </label>
-                </td>
-                <td>${student.student_group || ""}</td>
-                <td>${student.fullname || ""}</td>
-                <td>${student.gender || ""}</td>
-                <td>${formattedBirthday}</td>
-                <td><div class="active"></div></td>
-                <td>
-                    <button class="edit" aria-label="Edit" onclick="editStudent(${student.id})"></button>
-                    <button class="delete" aria-label="Delete" onclick="deleteStudentPrompt(${student.id}, '${(student.fullname || "").replace(/'/g, "\\'")}')"></button>
-                </td>
-            </tr>
-        `);
+      <tr data-id="${student.id}">
+        <td>
+          <label class="checkbox-container">
+            <input type="checkbox" class="student-select custom-check" data-id="${student.id}"/>
+            <span class="custom-check"></span>
+            <span class="visually-hidden">Select student</span>
+          </label>
+        </td>
+        <td>${student.student_group || ""}</td>
+        <td>${student.fullname || `${student.firstname} ${student.lastname}`}</td>
+        <td>${student.gender || ""}</td>
+        <td>${formattedBirthday}</td>
+        <td><div class="${statusClass}"></div></td>
+        <td>
+          <button class="edit" aria-label="Edit" onclick="editStudent(${student.id})"></button>
+          <button class="delete" aria-label="Delete" onclick="deleteStudentPrompt(${student.id}, '${(student.fullname || `${student.firstname} ${student.lastname}`).replace(/'/g, "\\'")}')"></button>
+        </td>
+      </tr>
+    `);
   });
 
   // Оновлюємо обробники чекбоксів
@@ -645,38 +692,41 @@ function goToPage(page) {
 }
 
 // Функція для оновлення обробників подій чекбоксів
+// Функція для оновлення обробників подій чекбоксів
 function updateCheckboxes() {
   const selectAllCheckbox = document.getElementById('selectAll');
   const studentCheckboxes = document.querySelectorAll('.student-select');
 
-  if (selectAllCheckbox) {
-    // Очищаємо попередні обробники
-    const newSelectAllCheckbox = selectAllCheckbox.cloneNode(true);
-    selectAllCheckbox.parentNode.replaceChild(newSelectAllCheckbox, selectAllCheckbox);
+  // Перевіряємо наявність головного чекбокса
+  if (!selectAllCheckbox) return;
 
-    // Додаємо новий обробник
-    newSelectAllCheckbox.addEventListener('change', function() {
-      studentCheckboxes.forEach(checkbox => {
-        checkbox.checked = this.checked;
-      });
-      toggleEditButtons();
+  // Очищаємо попередні обробники перед додаванням нових
+  selectAllCheckbox.replaceWith(selectAllCheckbox.cloneNode(true));
+  studentCheckboxes.forEach((checkbox) => {
+    checkbox.replaceWith(checkbox.cloneNode(true));
+  });
+
+  // Заново отримуємо оновлений головний чекбокс і чекбокси студентів
+  const updatedSelectAllCheckbox = document.getElementById('selectAll');
+  const updatedStudentCheckboxes = document.querySelectorAll('.student-select');
+
+  // Додаємо обробник для головного чекбокса
+  updatedSelectAllCheckbox.addEventListener('change', function () {
+    const isChecked = this.checked;
+    updatedStudentCheckboxes.forEach((checkbox) => {
+      checkbox.checked = isChecked;
     });
-  }
+  });
 
-  studentCheckboxes.forEach(checkbox => {
-    // Очищаємо попередні обробники
-    const newCheckbox = checkbox.cloneNode(true);
-    checkbox.parentNode.replaceChild(newCheckbox, checkbox);
+  // Додаємо обробники для кожного студентського чекбокса
+  updatedStudentCheckboxes.forEach((checkbox) => {
+    checkbox.addEventListener('change', function () {
+      const allChecked = Array.from(updatedStudentCheckboxes).every((cb) => cb.checked);
+      const anyUnchecked = Array.from(updatedStudentCheckboxes).some((cb) => !cb.checked);
 
-    // Додаємо новий обробник
-    newCheckbox.addEventListener('change', function() {
-      if (!this.checked && selectAllCheckbox) {
-        selectAllCheckbox.checked = false;
-      } else if (selectAllCheckbox &&
-        Array.from(document.querySelectorAll('.student-select')).every(cb => cb.checked)) {
-        selectAllCheckbox.checked = true;
-      }
-      toggleEditButtons();
+      // Оновлюємо стан головного чекбокса
+      updatedSelectAllCheckbox.checked = allChecked;
+      updatedSelectAllCheckbox.indeterminate = !allChecked && !anyUnchecked;
     });
   });
 }
@@ -834,3 +884,51 @@ function getCurrentUser() {
   // В реальному додатку це може бути взято з сесії або API
   return "IvanOlliinyk";
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+  const selectAllCheckbox = document.getElementById("selectAll");
+  const studentCheckboxes = document.querySelectorAll(".student-select");
+
+  // Обробник для головного чекбокса
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener("change", function () {
+      const isChecked = this.checked;
+      studentCheckboxes.forEach((checkbox) => {
+        checkbox.checked = isChecked;
+      });
+    });
+  }
+
+  // Оновлення стану головного чекбокса, якщо змінюється стан окремих чекбоксів
+  studentCheckboxes.forEach((checkbox) => {
+    checkbox.addEventListener("change", function () {
+      const allChecked = Array.from(studentCheckboxes).every((cb) => cb.checked);
+      const anyUnchecked = Array.from(studentCheckboxes).some((cb) => !cb.checked);
+
+      // Автоматично оновлюємо стан головного чекбокса
+      selectAllCheckbox.checked = allChecked;
+      selectAllCheckbox.indeterminate = !allChecked && !anyUnchecked;
+    });
+  });
+});
+
+// Make sure notification button navigation works properly
+document.addEventListener('DOMContentLoaded', function() {
+  const notificationBtn = document.getElementById('notification-btn');
+
+  if (notificationBtn) {
+    // Remove any existing click event listeners
+    const newNotificationBtn = notificationBtn.cloneNode(true);
+    notificationBtn.parentNode.replaceChild(newNotificationBtn, notificationBtn);
+
+    // Add a click event directly to navigate to messages page
+    newNotificationBtn.addEventListener('click', function(e) {
+      // This will force navigation even if there are other event listeners
+      window.location.href = '/views/messages/index.php';
+      e.preventDefault(); // Prevent other handlers from running
+    });
+
+    // Make sure it looks clickable
+    newNotificationBtn.style.cursor = 'pointer';
+  }
+});
