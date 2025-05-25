@@ -1,0 +1,199 @@
+/* New Chat Dialog Styles */
+.new-chat-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+}
+
+.dialog-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.dialog-content {
+    background: linear-gradient(135deg, rgba(40, 10, 80, 0.95), rgba(20, 5, 40, 0.95));
+    border: 1px solid var(--neon-primary);
+    border-radius: 10px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 0 20px var(--neon-primary), 0 0 40px var(--neon-secondary);
+}
+
+.dialog-content h3 {
+    margin: 0 0 20px 0;
+    color: white;
+    text-align: center;
+    font-size: 24px;
+    text-shadow: 0 0 5px var(--neon-primary);
+}
+
+.dialog-content label {
+    display: block;
+    color: white;
+    margin: 15px 0 5px 0;
+    font-weight: bold;
+    text-shadow: 0 0 3px rgba(0, 255, 255, 0.5);
+}
+
+.dialog-content input[type="text"],
+.dialog-content textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--neon-primary);
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.3);
+    color: white;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+.dialog-content input[type="text"]:focus,
+.dialog-content textarea:focus {
+    outline: none;
+    border-color: var(--neon-secondary);
+    box-shadow: 0 0 8px var(--neon-primary);
+}
+
+.dialog-content textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.students-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 5px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    margin-top: 5px;
+}
+
+.student-option {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    cursor: pointer;
+    color: white;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+.student-option:last-child {
+    border-bottom: none;
+}
+
+.student-option:hover {
+    background: rgba(0, 255, 255, 0.1);
+    padding-left: 10px;
+}
+
+.student-option input[type="checkbox"] {
+    margin-right: 10px;
+    width: 18px;
+    height: 18px;
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.dialog-buttons button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: bold;
+}
+
+.cancel-btn {
+    background: linear-gradient(45deg, #666, #888);
+    color: white;
+}
+
+.cancel-btn:hover {
+    background: linear-gradient(45deg, #777, #999);
+    transform: translateY(-2px);
+}
+
+.create-btn {
+    background: linear-gradient(45deg, var(--neon-primary), var(--neon-secondary));
+    color: black;
+    box-shadow: 0 0 10px var(--neon-primary);
+}
+
+.create-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px var(--neon-primary), 0 0 25px var(--neon-secondary);
+}
+
+/* Member status indicators */
+.member {
+    position: relative;
+}
+
+.member-status {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--neon-dark);
+}
+
+.member-status.online {
+    background: var(--neon-green);
+    box-shadow: 0 0 5px var(--neon-green);
+}
+
+.member-status.offline {
+    background: #ff3366;
+    box-shadow: 0 0 5px #ff3366;
+}
+
+.current-user {
+    border: 2px solid var(--neon-yellow) !important;
+    box-shadow: 0 0 10px var(--neon-yellow) !important;
+}
+
+/* Scrollbar for dialogs */
+.dialog-content::-webkit-scrollbar,
+.students-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dialog-content::-webkit-scrollbar-track,
+.students-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb,
+.students-list::-webkit-scrollbar-thumb {
+    background: var(--neon-primary);
+    border-radius: 10px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb:hover,
+.students-list::-webkit-scrollbar-thumb:hover {
+    background: var(--neon-secondary);
+}
