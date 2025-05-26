@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест з'єднання з Node.js</title>
+  <style>
+      body {
+          font-family: Arial, sans-serif;
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 20px;
+          background-color: #f0f0f0;
+      }
+      h1 {
+          color: #333;
+      }
+      .card {
+          background-color: white;
+          border-radius: 8px;
+          padding: 20px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      button {
+          background-color: #4CAF50;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 4px;
+          cursor: pointer;
+          margin-right: 10px;
+          margin-bottom: 10px;
+      }
+      button:hover {
+          background-color: #45a049;
+      }
+      pre {
+          background-color: #f5f5f5;
+          padding: 10px;
+          border-radius: 4px;
+          overflow-x: auto;
+      }
+      .error {
+          color: red;
+      }
+  </style>
+</head>
+<body>
+<h1>Тест з'єднання з Node.js</h1>
+
+<div class="card">
+  <h2>Перевірка з'єднання</h2>
+  <button id="testConnection">Перевірити з'єднання з Node.js</button>
+  <div id="connectionResult"></div>
+</div>
+
+<div class="card">
+  <h2>Отримати дані користувача</h2>
+  <button id="getUserInfo">Отримати дані користувача з PHP</button>
+  <div id="userInfoResult"></div>
+</div>
+
+<div class="card">
+  <h2>Синхронізація з Node.js</h2>
+  <button id="syncUser">Синхронізувати користувача</button>
+  <div id="syncResult"></div>
+</div>
+
+<script>
+  // Функція для відображення результату
+  function showResult(elementId, data, isError = false) {
+    const element = document.getElementById(elementId);
+    const pre = document.createElement('pre');
+    pre.textContent = JSON.stringify(data, null, 2);
+    if (isError) pre.className = 'error';
+
+    // Очистити попередні результати
+    element.innerHTML = '';
+    element.appendChild(pre);
+  }
+
+  // Перевірка з'єднання
+  document.getElementById('testConnection').addEventListener('click', async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/health-check');
+
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+
+      const data = await response.json();
+      showResult('connectionResult', data);
+    } catch (error) {
+      showResult('connectionResult', { error: error.message }, true);
+    }
+  });
+
+  // Отримання даних користувача
+  document.getElementById('getUserInfo').addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/user-info.php');
+
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+
+      const data = await response.json();
+      showResult('userInfoResult', data);
+    } catch (error) {
+      showResult('userInfoResult', { error: error.message }, true);
+    }
+  });
+
+  // Синхронізація користувача
+  document.getElementById('syncUser').addEventListener('click', async () => {
+    try {
+      // Спочатку отримуємо дані користувача
+      const userResponse = await fetch('/api/user-info.php');
+
+      if (!userResponse.ok) {
+        throw new Error(`HTTP error ${userResponse.status}`);
+      }
+
+      const userData = await userResponse.json();
+
+      if (!userData.success) {
+        throw new Error(userData.message || 'Failed to get user data');
+      }
+
+      // Синхронізуємо з Node.js
+      const syncResponse = await fetch('http://localhost:3001/api/sync-user', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phpUser: {
+            id: userData.user.id,
+            email: userData.user.email,
+            firstname: userData.user.firstname,
+            lastname: userData.user.lastname,
+            role: userData.user.role || 'student'
+          }
+        })
+      });
+
+      if (!syncResponse.ok) {
+        throw new Error(`Node.js sync failed: ${syncResponse.status}`);
+      }
+
+      const syncResult = await syncResponse.json();
+      showResult('syncResult', syncResult);
+    } catch (error) {
+      showResult('syncResult', { error: error.message }, true);
+    }
+  });
+</script>
+</body>
+</html>

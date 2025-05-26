@@ -7,45 +7,219 @@ class MessagingClient {
     this.isConnected = false;
   }
 
+
+  async initializeMessaging() {
+    try {
+      console.log('Initializing messaging system...');
+
+      // 1. Спочатку отримаємо дані користувача з PHP сесії
+      const userInfoResponse = await fetch('/api/user-info.php');
+      if (!userInfoResponse.ok) {
+        throw new Error(`Failed to get user info: ${userInfoResponse.status}`);
+      }
+
+      const userInfo = await userInfoResponse.json();
+      console.log('User info from PHP:', userInfo);
+
+      if (!userInfo.success) {
+        throw new Error(userInfo.message || 'Failed to get user data');
+      }
+
+      // 2. Напряму синхронізуємося з Node.js сервером
+      const syncResponse = await fetch('http://localhost:3001/api/sync-user', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phpUser: {
+            id: userInfo.user.id,
+            email: userInfo.user.email,
+            firstname: userInfo.user.firstname,
+            lastname: userInfo.user.lastname,
+            role: userInfo.user.role || 'student'
+          }
+        })
+      });
+
+      if (!syncResponse.ok) {
+        throw new Error(`Node.js sync failed: ${syncResponse.status}`);
+      }
+
+      const syncResult = await syncResponse.json();
+      console.log('Node.js sync result:', syncResult);
+
+      if (!syncResult.success) {
+        throw new Error(syncResult.message || 'Sync failed');
+      }
+
+      // 3. Запам'ятовуємо дані користувача
+      this.currentUser = {
+        id: syncResult.user._id,
+        phpUserId: syncResult.user.phpUserId,
+        email: syncResult.user.email,
+        firstname: syncResult.user.firstname,
+        lastname: syncResult.user.lastname
+      };
+
+      // 4. Завантажуємо список чатів
+      await this.loadChatRooms();
+
+      // 5. Підключаємо сокети
+      this.initializeWebSockets();
+
+      return true;
+    } catch (error) {
+      console.error('Error initializing messaging:', error);
+      this.showError(`Помилка підключення до сервера повідомлень: ${error.message}`);
+      return false;
+    }
+  }
+
+// Метод для перевірки з'єднання з Node.js
+  async checkNodeJSConnection() {
+    try {
+      const response = await fetch('http://localhost:3001/api/health-check', {
+        method: 'GET',
+        mode: 'cors',
+        cache: 'no-cache'
+      });
+
+      if (!response.ok) {
+        return {
+          connected: false,
+          status: response.status,
+          message: `HTTP error ${response.status}`
+        };
+      }
+
+      const data = await response.json();
+      return {
+        connected: true,
+        status: 200,
+        message: 'Connected to Node.js server',
+        data: data
+      };
+    } catch (error) {
+      console.error('Node.js connection error:', error);
+      return {
+        connected: false,
+        status: 0,
+        message: error.message
+      };
+    }
+  }
   // Ініціалізація підключення
   async init() {
     try {
-      // Спочатку синхронізуємо користувача з Node.js
-      await this.syncUserToNode();
+      // First sync PHP user to Node.js
+      const syncSuccess = await this.syncUserToNode();
 
-      // Підключаємося до Socket.IO
+      if (!syncSuccess) {
+        console.error("Failed to sync user with messaging server. Chat functionality may be limited.");
+        // Continue anyway - don't return, as partial functionality may still work
+      }
+
+      // Now connect to Socket.IO server
       this.socket = io('http://localhost:3000', {
-        withCredentials: true
+        withCredentials: true // Important! This ensures cookies are sent with socket
       });
 
+      console.log('Connected to messaging server');
+
+      // Setup socket event listeners
       this.setupSocketListeners();
-      this.loadChatRooms();
+
+      // Load chat rooms for the user
+      await this.loadChatRooms();
+
+      // Setup UI event handlers
       this.setupUI();
 
+      // Request notification permissions
+      this.requestNotificationPermission();
+
+      return true;
     } catch (error) {
       console.error('Failed to initialize messaging:', error);
-      this.showError('Не вдалося підключитися до сервера повідомлень');
+      this.showError('Failed to connect to messaging server');
+      return false;
     }
   }
 
   // Синхронізація користувача з Node.js
+  // Модифікуйте метод syncUserToNode для кращої обробки помилок
   async syncUserToNode() {
+    console.log('Starting user sync to Node.js...');
+
     try {
-      const response = await fetch('/api/messages_api.php?action=sync-to-node', {
+      // Спочатку спробуємо отримати інформацію про користувача
+      const userResponse = await fetch('/api/messages_api_fixed.php?action=get-user-info', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
       });
 
-      const result = await response.json();
-      if (result.success && result.nodeResponse && result.nodeResponse.success) {
-        this.currentUser = result.nodeResponse.user;
-        console.log('User synced to Node.js:', this.currentUser);
-      } else {
-        throw new Error('Failed to sync user to Node.js');
+      if (!userResponse.ok) {
+        console.error(`User info error: ${userResponse.status}`);
+        this.showError('Не вдалося отримати інформацію про користувача');
+        return false;
       }
+
+      const userData = await userResponse.json();
+      console.log('User info:', userData);
+
+      if (!userData.success || !userData.user || !userData.user.id) {
+        console.error('Invalid user data');
+        this.showError('Некоректні дані користувача');
+        return false;
+      }
+
+      // Тепер виконуємо синхронізацію з Node.js
+      const response = await fetch('/api/messages_api_fixed.php?action=sync-to-node', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        console.error(`Sync error HTTP: ${response.status}`);
+        // Для діагностики отримаємо текст помилки
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        this.showError(`Помилка синхронізації: ${response.status}`);
+        return false;
+      }
+
+      const data = await response.json();
+      console.log('Sync response:', data);
+
+      if (!data.success) {
+        console.error('Sync failed:', data.message);
+        this.showError(`Помилка синхронізації: ${data.message}`);
+        return false;
+      }
+
+      // Запам'ятовуємо інформацію про користувача
+      this.currentUser = {
+        id: data.user._id,
+        phpUserId: data.user.phpUserId,
+        email: data.user.email,
+        firstname: data.user.firstname,
+        lastname: data.user.lastname
+      };
+
+      console.log('User successfully synced with Node.js');
+      return true;
     } catch (error) {
-      console.error('Sync error:', error);
-      throw error;
+      console.error('Error syncing user to Node.js:', error);
+      this.showError(`Помилка з'єднання: ${error.message}`);
+      return false;
     }
   }
 
@@ -603,3 +777,4 @@ document.addEventListener('DOMContentLoaded', function() {
 // Експортуємо для використання в інших файлах
 window.MessagingClient = MessagingClient;
 window.messagingClient = messagingClient;
+

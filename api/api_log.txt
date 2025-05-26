@@ -1,0 +1,31 @@
+2025-05-26 00:33:15 - API Request: /api/messages_api_fixed.php?action=get-user-info
+2025-05-26 00:33:15 - API Request: /api/messages_api_fixed.php?action=sync-to-node
+2025-05-26 00:33:15 - User Data: {"id":2,"email":"02ivanivan02@gmail.com","firstname":"Ivan","lastname":"Oliinyk","role":"student"}
+2025-05-26 00:38:19 - API Request: /api/messages_api_fixed.php?action=get-user-info
+2025-05-26 00:38:19 - API Request: /api/messages_api_fixed.php?action=sync-to-node
+2025-05-26 00:38:19 - User Data: {"id":2,"email":"02ivanivan02@gmail.com","firstname":"Ivan","lastname":"Oliinyk","role":"student"}
+2025-05-26 00:38:22 - Node.js Response: Code=0, Error=Failed to connect to localhost port 3001 after 2248 ms: Could not connect to server, Result=
+2025-05-26 00:45:02 - API Request: /api/messages_api_fixed.php?action=get-user-info
+2025-05-26 00:45:02 - API Request: /api/messages_api_fixed.php?action=sync-to-node
+2025-05-26 00:45:02 - User Data: {"id":2,"email":"02ivanivan02@gmail.com","firstname":"Ivan","lastname":"Oliinyk","role":"student"}
+2025-05-26 00:45:04 - Node.js Response: Code=0, Error=Failed to connect to localhost port 3001 after 2236 ms: Could not connect to server, Result=
+2025-05-26 00:45:11 - API Request: /api/messages_api_fixed.php?action=get-user-info
+2025-05-26 00:45:11 - API Request: /api/messages_api_fixed.php?action=sync-to-node
+2025-05-26 00:45:11 - User Data: {"id":2,"email":"02ivanivan02@gmail.com","firstname":"Ivan","lastname":"Oliinyk","role":"student"}
+2025-05-26 00:45:13 - Node.js Response: Code=0, Error=Failed to connect to localhost port 3001 after 2245 ms: Could not connect to server, Result=
+2025-05-26 00:45:20 - API Request: /api/messages_api_fixed.php?action=get-user-info
+2025-05-26 00:45:20 - API Request: /api/messages_api_fixed.php?action=sync-to-node
+2025-05-26 00:45:20 - User Data: {"id":2,"email":"02ivanivan02@gmail.com","firstname":"Ivan","lastname":"Oliinyk","role":"student"}
+2025-05-26 00:45:23 - Node.js Response: Code=0, Error=Failed to connect to localhost port 3001 after 2255 ms: Could not connect to server, Result=
+2025-05-26 00:45:56 - API Request: /api/messages_api_fixed.php?action=get-user-info
+2025-05-26 00:45:56 - API Request: /api/messages_api_fixed.php?action=sync-to-node
+2025-05-26 00:45:56 - User Data: {"id":2,"email":"02ivanivan02@gmail.com","firstname":"Ivan","lastname":"Oliinyk","role":"student"}
+2025-05-26 00:45:58 - Node.js Response: Code=0, Error=Failed to connect to localhost port 3001 after 2228 ms: Could not connect to server, Result=
+2025-05-26 00:46:01 - API Request: /api/messages_api_fixed.php?action=get-user-info
+2025-05-26 00:46:01 - API Request: /api/messages_api_fixed.php?action=sync-to-node
+2025-05-26 00:46:01 - User Data: {"id":2,"email":"02ivanivan02@gmail.com","firstname":"Ivan","lastname":"Oliinyk","role":"student"}
+2025-05-26 00:46:03 - Node.js Response: Code=0, Error=Failed to connect to localhost port 3001 after 2233 ms: Could not connect to server, Result=
+2025-05-26 00:49:16 - API Request: /api/messages_api_fixed.php?action=get-user-info
+2025-05-26 00:49:16 - API Request: /api/messages_api_fixed.php?action=sync-to-node
+2025-05-26 00:49:16 - User Data: {"id":2,"email":"02ivanivan02@gmail.com","firstname":"Ivan","lastname":"Oliinyk","role":"student"}
+2025-05-26 00:49:19 - Node.js Response: Code=0, Error=Failed to connect to localhost port 3001 after 2256 ms: Could not connect to server, Result=
