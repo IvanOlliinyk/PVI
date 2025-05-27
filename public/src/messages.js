@@ -7,15 +7,76 @@ class MessagingClient {
     this.isConnected = false;
   }
 
+  async checkConnection() {
+    try {
+      console.log("Running connection diagnostics...");
+
+      // Step 1: Check PHP session status
+      const userInfoResponse = await fetch('/api/user-info.php');
+      const userInfo = await userInfoResponse.json();
+      console.log("PHP Session Status:", userInfo);
+
+      if (!userInfo.success) {
+        alert("Authentication issue: " + userInfo.message);
+        return false;
+      }
+
+      // Step 2: Test messaging debug endpoint
+      const debugResponse = await fetch('/api/messaging_debug.php');
+      const debugInfo = await debugResponse.json();
+      console.log("Connection Diagnostics:", debugInfo);
+
+      // Show diagnostic info
+      const nodeConnected = debugInfo.node_server_health.connected;
+      const studentsEndpoint = debugInfo.students_endpoint.connected;
+
+      if (!nodeConnected) {
+        alert("Cannot connect to messaging server. Is Node.js server running?");
+        return false;
+      }
+
+      if (!studentsEndpoint) {
+        alert("Students endpoint not available. Error: " +
+            debugInfo.students_endpoint.error);
+        return false;
+      }
+
+      // Step 3: Try explicit sync
+      const syncResponse = await fetch('/api/messages_api.php?action=sync-to-node');
+      const syncResult = await syncResponse.json();
+      console.log("Explicit sync result:", syncResult);
+
+      if (!syncResult.success) {
+        alert("Failed to sync with Node.js server: " + syncResult.message);
+        return false;
+      }
+
+      // Step 4: Try getting students directly from Node.js
+      const directStudentsResponse = await fetch('http://localhost:3000/api/students', {
+        credentials: 'include'  // Important: send cookies
+      });
+      const directStudentsResult = await directStudentsResponse.json();
+      console.log("Direct students request:", directStudentsResult);
+
+      return directStudentsResult.success;
+
+    } catch (error) {
+      console.error("Connection check failed:", error);
+      alert("Connection check failed: " + error.message);
+      return false;
+    }
+  }
+
 
   async initializeMessaging() {
+
     try {
       console.log('Initializing messaging system...');
 
-      // 1. Спочатку отримаємо дані користувача з PHP сесії
-      const userInfoResponse = await fetch('/api/user-info.php');
-      if (!userInfoResponse.ok) {
-        throw new Error(`Failed to get user info: ${userInfoResponse.status}`);
+      // Run connection check first
+      const connectionOk = await this.checkConnection();
+      if (!connectionOk) {
+        throw new Error("Connection check failed");
       }
 
       const userInfo = await userInfoResponse.json();
@@ -26,7 +87,7 @@ class MessagingClient {
       }
 
       // 2. Напряму синхронізуємося з Node.js сервером
-      const syncResponse = await fetch('http://localhost:3001/api/sync-user', {
+      const syncResponse = await fetch('http://localhost:3000/api/sync-user', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -71,6 +132,38 @@ class MessagingClient {
     } catch (error) {
       console.error('Error initializing messaging:', error);
       this.showError(`Помилка підключення до сервера повідомлень: ${error.message}`);
+      return false;
+    }
+  }
+
+  async ensureSynchronized() {
+    console.log("Ensuring PHP and Node.js sessions are synchronized...");
+
+    try {
+      // First try to sync the sessions
+      const syncResponse = await fetch('/api/sync_sessions.php');
+      const syncResult = await syncResponse.json();
+
+      console.log("Session synchronization result:", syncResult);
+
+      if (!syncResult.sync_status.success) {
+        console.error("Failed to synchronize sessions:", syncResult.sync_status);
+        alert("Failed to synchronize with messaging server. Please try logging in again.");
+        return false;
+      }
+
+      if (!syncResult.students_check.success) {
+        console.error("Session sync appeared successful but students endpoint still failed:",
+            syncResult.students_check);
+        alert("Session synchronization incomplete. Please try refreshing the page.");
+        return false;
+      }
+
+      console.log("Synchronization successful!");
+      return true;
+    } catch (error) {
+      console.error("Synchronization error:", error);
+      alert("Error during session synchronization: " + error.message);
       return false;
     }
   }
@@ -259,13 +352,33 @@ class MessagingClient {
   // Завантаження чат-кімнат
   async loadChatRooms() {
     try {
-      const response = await fetch('http://localhost:3000/api/chat-rooms', {
-        credentials: 'include'
-      });
+      console.log('Loading chat rooms through PHP proxy...');
 
-      const result = await response.json();
+      // Use our PHP proxy instead of direct Node.js connection
+      const response = await fetch('/api/get_chat_rooms.php');
+
+      if (!response.ok) {
+        console.error('HTTP error when loading chat rooms:', response.status);
+        return;
+      }
+
+      const responseText = await response.text();
+      console.log('Chat rooms response:', responseText);
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse chat rooms response:', parseError);
+        console.error('Response content:', responseText);
+        return;
+      }
+
       if (result.success) {
+        console.log(`Loaded ${result.chatRooms.length} chat rooms`);
         this.renderChatRooms(result.chatRooms);
+      } else {
+        console.error('Failed to load chat rooms:', result.message);
       }
     } catch (error) {
       console.error('Failed to load chat rooms:', error);
@@ -492,12 +605,15 @@ class MessagingClient {
   // Створення нового чату
   async createNewChat(name, description, memberPhpIds, isGroup = true) {
     try {
-      const response = await fetch('http://localhost:3000/api/chat-rooms', {
+      console.log("Creating new chat with members:", memberPhpIds);
+
+      // Use our diagnostic tool
+      const response = await fetch('/api/chat_creation_debug.php', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify({
           name,
           description,
@@ -506,20 +622,44 @@ class MessagingClient {
         })
       });
 
-      const result = await response.json();
+      // Get the response text for debugging
+      const responseText = await response.text();
+      console.log("Raw response:", responseText);
+
+      let result;
+      try {
+        // Try to parse as JSON
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Failed to parse response:", parseError);
+        console.error("Response content:", responseText);
+
+        // Check logs for the issue
+        const logCheckerResponse = await fetch('/api/check_chat_logs.php');
+        const logData = await logCheckerResponse.text();
+        console.log("Log data:", logData);
+
+        this.showError(`Помилка сервера: отримано неправильний формат відповіді. Перевірте логи.`);
+        return false;
+      }
+
       if (result.success) {
-        // Оновлюємо список чатів
+        console.log("Chat created successfully:", result);
+        // Reload chat rooms after creating a new one
         await this.loadChatRooms();
-        // Вибираємо новий чат
-        this.selectChatRoom(result.chatRoom);
+        // Select the new chat
+        if (result.chatRoom) {
+          this.selectChatRoom(result.chatRoom);
+        }
         return true;
       } else {
+        console.error("Error from server:", result);
         this.showError(result.message || 'Не вдалося створити чат');
         return false;
       }
     } catch (error) {
       console.error('Failed to create chat:', error);
-      this.showError('Помилка створення чату');
+      this.showError('Помилка створення чату: ' + error.message);
       return false;
     }
   }
@@ -556,22 +696,28 @@ class MessagingClient {
   // Показ діалогу нового чату
   async showNewChatDialog() {
     try {
-      // Завантажуємо список студентів
-      const response = await fetch('/api/messages_api.php?action=get-students');
+      console.log("Opening new chat dialog - fetching students from database");
+
+      // Use our new endpoint to get real students from MySQL
+      const response = await fetch('/api/fetch_db_students.php');
       const result = await response.json();
 
       if (!result.success) {
-        this.showError('Не вдалося завантажити список студентів');
+        console.error("Failed to load students:", result);
+        this.showError('Не вдалося завантажити список студентів: ' +
+            (result.message || 'Невідома помилка'));
         return;
       }
 
-      // Створюємо діалог
+      console.log("Successfully loaded students:", result.students.length);
+
+      // Create the dialog with the real students
       const dialog = this.createNewChatDialog(result.students);
       document.body.appendChild(dialog);
 
     } catch (error) {
       console.error('Failed to show new chat dialog:', error);
-      this.showError('Помилка завантаження діалогу');
+      this.showError('Помилка завантаження діалогу: ' + error.message);
     }
   }
 
@@ -773,6 +919,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000);
   }
 });
+
+
 
 // Експортуємо для використання в інших файлах
 window.MessagingClient = MessagingClient;

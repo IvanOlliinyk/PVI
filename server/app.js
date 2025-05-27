@@ -172,7 +172,18 @@ const authenticateUser = (req, res, next) => {
 };
 
 // API маршрути
+app.use((req, res, next) => {
+  // Handle alternate cookie formats
+  if (!req.session?.userId && req.cookies) {
+    console.log('Session middleware - checking cookies:', req.cookies);
+    // Log all cookies to debug
+    Object.keys(req.cookies).forEach(key => {
+      console.log(`Cookie ${key}:`, req.cookies[key]);
+    });
+  }
 
+  next();
+});
 // Тестовий маршрут
 app.get('/api/test', (req, res) => {
   res.json({
@@ -186,39 +197,49 @@ app.get('/api/test', (req, res) => {
 // Синхронізація користувача з PHP
 // Оновлений обробник для синхронізації користувачів
 app.post('/api/sync-user', async (req, res) => {
-  console.log('Sync-user request received');
+  console.log('============================================');
+  console.log('SYNC USER REQUEST RECEIVED');
   console.log('Headers:', req.headers);
   console.log('Cookies:', req.cookies);
+  console.log('Session ID:', req.sessionID);
+  console.log('Session Data:', req.session);
   console.log('Body:', req.body);
+  console.log('============================================');
 
   try {
     const { phpUser } = req.body;
 
     if (!phpUser || !phpUser.id) {
-      console.error('Invalid user data received');
+      console.error('Invalid user data received - missing ID');
       return res.status(400).json({
         success: false,
-        message: 'Invalid user data, missing ID'
+        message: 'Invalid user data, missing ID',
+        debug: {
+          receivedBody: req.body
+        }
       });
     }
 
-    // Перевірка, чи існує користувач
-    let user = await User.findOne({ phpUserId: phpUser.id });
+    // Ensure we're working with a string ID (for consistency)
+    const phpUserId = String(phpUser.id);
+
+    console.log(`Looking for user with phpUserId: ${phpUserId}`);
+
+    // Simplified: always create/update the user
+    let user = await User.findOne({ phpUserId });
 
     if (!user) {
-      console.log('Creating new user with phpUserId:', phpUser.id);
-      // Створюємо нового користувача
+      console.log(`Creating new user for phpUserId: ${phpUserId}`);
       user = new User({
-        phpUserId: phpUser.id,
-        email: phpUser.email || 'no-email@example.com',
+        phpUserId,
+        email: phpUser.email || `user${phpUserId}@example.com`,
         firstname: phpUser.firstname || 'User',
-        lastname: phpUser.lastname || String(phpUser.id),
+        lastname: phpUser.lastname || phpUserId,
         isOnline: true,
         lastSeen: new Date()
       });
     } else {
-      console.log('Updating existing user:', user._id);
-      // Оновлюємо існуючого користувача
+      console.log(`Updating existing user: ${user._id}`);
       user.email = phpUser.email || user.email;
       user.firstname = phpUser.firstname || user.firstname;
       user.lastname = phpUser.lastname || user.lastname;
@@ -226,27 +247,33 @@ app.post('/api/sync-user', async (req, res) => {
       user.lastSeen = new Date();
     }
 
-    // Зберігаємо користувача
+    // Save the user
     await user.save();
+    console.log(`User saved with ID: ${user._id}`);
 
-    // Зберігаємо дані в сесії
+    // IMPORTANT: Store both IDs in session
     req.session.userId = user._id;
-    req.session.phpUserId = phpUser.id;
+    req.session.phpUserId = phpUserId;
     req.session.userEmail = phpUser.email;
     req.session.userFirstname = phpUser.firstname;
     req.session.userLastname = phpUser.lastname;
 
-    // Зберігаємо сесію і чекаємо завершення
+    // Force session save and wait for it to complete
     await new Promise((resolve, reject) => {
-      req.session.save(err => {
-        if (err) reject(err);
-        else resolve();
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          reject(err);
+        } else {
+          console.log("Session saved successfully:", req.sessionID);
+          resolve();
+        }
       });
     });
 
-    console.log('User synced and session saved:', req.session);
+    console.log('After save - Session data:', req.session);
 
-    // Повертаємо успішну відповідь
+    // Return success response
     res.json({
       success: true,
       message: 'User synchronized successfully',
@@ -259,16 +286,38 @@ app.post('/api/sync-user', async (req, res) => {
       },
       session: {
         id: req.sessionID,
-        cookie: req.session.cookie
+        saved: true,
+        userId: req.session.userId,
+        phpUserId: req.session.phpUserId
       }
     });
+
   } catch (error) {
     console.error('Sync error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error: ' + error.message
+      message: 'Server error: ' + error.message,
+      stack: process.env.NODE_ENV === 'production' ? null : error.stack
     });
   }
+});
+
+// Add this endpoint to verify session status
+app.get('/api/session-check', (req, res) => {
+  console.log('Session check requested - Session ID:', req.sessionID);
+  console.log('Session data:', req.session);
+  console.log('Cookies:', req.cookies);
+
+  res.json({
+    session: {
+      id: req.sessionID,
+      exists: !!req.session,
+      userId: req.session?.userId || null,
+      phpUserId: req.session?.phpUserId || null,
+      isAuthenticated: !!(req.session?.userId || req.session?.phpUserId)
+    },
+    cookies: req.cookies
+  });
 });
 
 // Отримання списку користувачів
@@ -388,6 +437,97 @@ app.get('/api/chat-rooms', authenticateUser, async (req, res) => {
   }
 });
 
+app.post('/api/chat-rooms', async (req, res) => {
+  try {
+    console.log('Create Chat Room API Called');
+
+    // Authenticate with token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      });
+    }
+
+    // Verify token
+    const token = authHeader.split(' ')[1];
+    let userData;
+    try {
+      userData = JSON.parse(Buffer.from(token, 'base64').toString());
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    }
+
+    // Find the user
+    const currentUser = await User.findOne({ phpUserId: userData.user_id });
+
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Process request data
+    const { name, description, memberIds, isGroup = true } = req.body;
+
+    if (!name || !memberIds || !Array.isArray(memberIds)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name and memberIds are required'
+      });
+    }
+
+    // Find all members
+    const members = await User.find({
+      $or: [
+        { phpUserId: { $in: memberIds } },
+        { _id: currentUser._id }  // Always include current user
+      ]
+    });
+
+    if (members.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No valid members found'
+      });
+    }
+
+    // Create the chat room
+    const chatRoom = new ChatRoom({
+      name,
+      description,
+      members: members.map(m => m._id),
+      createdBy: currentUser._id,
+      isGroup,
+      createdAt: new Date()
+    });
+
+    await chatRoom.save();
+
+    // Populate members for the response
+    await chatRoom.populate('members', 'phpUserId email firstname lastname isOnline lastSeen');
+
+    console.log(`Created new chat room: ${name}`);
+
+    return res.json({
+      success: true,
+      message: 'Chat room created successfully',
+      chatRoom
+    });
+
+  } catch (error) {
+    console.error('Error creating chat room:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error: ' + error.message
+    });
+  }
+});
 // Отримання повідомлень чату
 app.get('/api/chat-rooms/:roomId/messages', authenticateUser, async (req, res) => {
   try {
@@ -513,6 +653,69 @@ io.on('connection', (socket) => {
   });
 });
 
+app.get('/api/students', async (req, res) => {
+  console.log('=== Students API Called ===');
+  console.log('Headers:', req.headers);
+  console.log('Cookies:', req.cookies);
+  console.log('Session:', req.session);
+
+  try {
+    // Check authentication with more detailed logs
+    if (!req.session || !req.session.userId) {
+      console.log('No userId in session:', req.session);
+
+      if (req.cookies && Object.keys(req.cookies).length > 0) {
+        console.log('Has cookies but no session data');
+      }
+
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+        sessionExists: !!req.session,
+        sessionId: req.sessionID,
+        cookiesFound: Object.keys(req.cookies || {})
+      });
+    }
+
+    // Simplified: just return any users as students for testing
+    const users = await User.find({})
+        .select('_id phpUserId email firstname lastname');
+
+    console.log(`Found ${users.length} users to return as students`);
+
+    return res.json({
+      success: true,
+      students: users.map(user => ({
+        user_id: user.phpUserId || user._id,
+        firstname: user.firstname || 'User',
+        lastname: user.lastname || user._id.toString().substr(-4),
+        email: user.email || 'no-email',
+        student_group: 'PZ-11' // Default group for testing
+      }))
+    });
+  } catch (error) {
+    console.error('Error in students API:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error: ' + error.message
+    });
+  }
+});
+
+// Debug endpoint to see what's in the current session
+app.get('/api/debug-session', (req, res) => {
+  res.json({
+    session: {
+      id: req.sessionID,
+      cookie: req.session?.cookie,
+      userId: req.session?.userId,
+      phpUserId: req.session?.phpUserId,
+      userEmail: req.session?.userEmail
+    },
+    cookies: req.cookies
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
@@ -563,6 +766,258 @@ app.get('/api/students', async (req, res) => {
       success: false,
       message: 'Помилка при завантаженні списку студентів',
       error: error.message
+    });
+  }
+});
+
+app.get('/api/token-students', async (req, res) => {
+  try {
+    console.log('Token Students API Called');
+
+    // Get the token from the Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Decode and verify the token
+    try {
+      const userData = JSON.parse(Buffer.from(token, 'base64').toString());
+      console.log('Token decoded successfully:', userData);
+
+      // Basic validation
+      if (!userData.user_id || !userData.timestamp) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token format'
+        });
+      }
+
+      // Check if token is not too old (30 minute expiration)
+      const tokenAge = Math.floor(Date.now() / 1000) - userData.timestamp;
+      if (tokenAge > 1800) {
+        return res.status(401).json({
+          success: false,
+          message: 'Token expired',
+          tokenAge: tokenAge
+        });
+      }
+
+      // Find or create this user in MongoDB
+      let user = await User.findOne({ phpUserId: userData.user_id });
+      if (!user) {
+        user = new User({
+          phpUserId: userData.user_id,
+          email: userData.email || `user${userData.user_id}@example.com`,
+          firstname: userData.firstname || 'User',
+          lastname: userData.lastname || String(userData.user_id),
+          isOnline: true,
+          lastSeen: new Date()
+        });
+        await user.save();
+        console.log(`Created new user with phpUserId: ${userData.user_id}`);
+      }
+
+      // Get all users as students
+      const users = await User.find({})
+          .select('_id phpUserId email firstname lastname');
+
+      return res.json({
+        success: true,
+        students: users.map(u => ({
+          user_id: u.phpUserId || u._id,
+          firstname: u.firstname || 'User',
+          lastname: u.lastname || 'Student',
+          email: u.email || 'no-email@example.com',
+          student_group: 'PZ-11' // Default group for testing purposes
+        }))
+      });
+    } catch (tokenError) {
+      console.error('Token decode error:', tokenError);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid authorization token'
+      });
+    }
+  } catch (error) {
+    console.error('Error in token students API:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error: ' + error.message
+    });
+  }
+});
+
+app.post('/api/add-test-student', async (req, res) => {
+  try {
+    console.log('Add Test Student API Called');
+
+    // Get the token from the Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Decode and verify the token
+    try {
+      const userData = JSON.parse(Buffer.from(token, 'base64').toString());
+      console.log('Token decoded successfully:', userData);
+
+      // Check student data in request body
+      const studentData = req.body;
+      console.log('Received student data:', studentData);
+
+      if (!studentData.phpUserId || !studentData.firstname || !studentData.lastname) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required student data'
+        });
+      }
+
+      // Check if this student already exists (by phpUserId)
+      let existingStudent = await User.findOne({ phpUserId: studentData.phpUserId });
+      if (existingStudent) {
+        console.log(`Student with phpUserId ${studentData.phpUserId} already exists`);
+        return res.json({
+          success: true,
+          message: 'Student already exists',
+          user: {
+            _id: existingStudent._id,
+            phpUserId: existingStudent.phpUserId,
+            firstname: existingStudent.firstname,
+            lastname: existingStudent.lastname,
+            email: existingStudent.email
+          }
+        });
+      }
+
+      // Create new student user
+      const newStudent = new User({
+        phpUserId: studentData.phpUserId,
+        email: studentData.email || `student${studentData.phpUserId}@example.com`,
+        firstname: studentData.firstname,
+        lastname: studentData.lastname,
+        role: studentData.role || 'student',
+        isOnline: false,
+        lastSeen: new Date()
+      });
+
+      await newStudent.save();
+
+      console.log(`Created test student: ${newStudent.firstname} ${newStudent.lastname}`);
+
+      return res.json({
+        success: true,
+        message: 'Test student created successfully',
+        user: {
+          _id: newStudent._id,
+          phpUserId: newStudent.phpUserId,
+          firstname: newStudent.firstname,
+          lastname: newStudent.lastname,
+          email: newStudent.email
+        }
+      });
+    } catch (tokenError) {
+      console.error('Token decode error:', tokenError);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid authorization token'
+      });
+    }
+  } catch (error) {
+    console.error('Error in add test student API:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error: ' + error.message
+    });
+  }
+});
+
+app.post('/api/sync-mysql-student', async (req, res) => {
+  try {
+    // Authenticate with token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      });
+    }
+
+    // Verify token
+    const token = authHeader.split(' ')[1];
+    let userData;
+    try {
+      userData = JSON.parse(Buffer.from(token, 'base64').toString());
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    }
+
+    // Get student data from request
+    const studentData = req.body;
+    console.log('Syncing MySQL student:', studentData);
+
+    // Check for required fields
+    if (!studentData.user_id || !studentData.firstname || !studentData.lastname) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required student data'
+      });
+    }
+
+    // Look for existing student or create new one
+    let user = await User.findOne({ phpUserId: studentData.user_id });
+
+    if (!user) {
+      user = new User({
+        phpUserId: studentData.user_id,
+        email: studentData.email || `student${studentData.user_id}@example.com`,
+        firstname: studentData.firstname,
+        lastname: studentData.lastname,
+        role: 'student',
+        isOnline: false,
+        lastSeen: new Date()
+      });
+      await user.save();
+      console.log(`Created new MongoDB user for MySQL student ID ${studentData.user_id}`);
+    } else {
+      // Update existing user
+      user.firstname = studentData.firstname;
+      user.lastname = studentData.lastname;
+      user.email = studentData.email || user.email;
+      await user.save();
+      console.log(`Updated MongoDB user for MySQL student ID ${studentData.user_id}`);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Student synced successfully',
+      user: {
+        _id: user._id,
+        phpUserId: user.phpUserId,
+        firstname: user.firstname,
+        lastname: user.lastname
+      }
+    });
+
+  } catch (error) {
+    console.error('Error syncing MySQL student:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error: ' + error.message
     });
   }
 });
