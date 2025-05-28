@@ -202,6 +202,7 @@ echo '<script>
 
 <!-- Socket.IO client - змінюємо на CDN для надійності -->
 <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+<script src="/public/src/socket-manager.js"></script>
 <script src="/public/src/auth.js"></script>
 <script src="/public/src/students.js"></script>
 <script src="/public/src/chat-helper.js"></script>

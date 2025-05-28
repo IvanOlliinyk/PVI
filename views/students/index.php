@@ -19,27 +19,7 @@
       <div id="notifications-popup" class="popup">
         <div class="popup-content">
           <div class="popup-body">
-            <div class="notification">
-              <div>
-                <img src="/public/src/assets/max.jpg" alt="profile">
-                <p>Max Sakh</p>
-              </div>
-              <p>Nihao padoshva</p>
-            </div>
-            <div class="notification">
-              <div>
-                <img src="/public/src/assets/chef.jpg" alt="profile">
-                <p>Shef</p>
-              </div>
-              <p>Fortnite 16:40</p>
-            </div>
-            <div class="notification">
-              <div>
-                <img src="/public/src/assets/yura.jpg" alt="profile">
-                <p>Yurii Stelmakh</p>
-              </div>
-              <p>I'm not Grisana</p>
-            </div>
+            <!-- Notifications will be dynamically inserted here -->
           </div>
         </div>
       </div>
@@ -332,9 +312,16 @@
   </div>
 </div>
 
+<!-- Підключення бібліотеки Socket.IO -->
+<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+
 <script src="/public/src/students.js"></script>
+<script src="/public/src/main.js"></script>
+
+<!-- Скрипт для авторизації та перевірки статусу -->
 <script src="/public/src/auth.js"></script>
 
 </body>
 </html>
+
 

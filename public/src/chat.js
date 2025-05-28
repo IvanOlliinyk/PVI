@@ -10,21 +10,33 @@ const chatClient = {
 
   // Initialize chat client
   init: function () {
-    // Initialize Socket.IO connection
-    try {
-      console.log("Initializing Socket.IO connection...");
+    // Get current user from localStorage
+    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+    this.currentUserId = currentUser.id ? String(currentUser.id) : null; // Ensure string
 
-      // Виправляємо налаштування Socket.IO для надійнішого підключення
-      this.socket = io("http://localhost:3001", {
-        reconnectionAttempts: 5,
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 20000,
-        transports: ["websocket", "polling"],
-        forceNew: true,
-        secure: false,
-      });
+    // Initialize Socket.IO connection using our shared socket manager
+    try {
+      console.log("Getting shared Socket.IO connection...");
+
+      // Перевіряємо, чи вже доступний socket-manager
+      if (window.socketManager) {
+        this.socket = window.socketManager.getSocket();
+        console.log("Using shared socket connection:", this.socket ? this.socket.id : "not connected");
+      } else {
+        // Fallback якщо з якихось причин socket-manager недоступний
+        console.log("Socket manager not available, creating direct connection");
+
+        this.socket = io("http://localhost:3001", {
+          reconnectionAttempts: 5,
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          timeout: 20000,
+          transports: ["websocket", "polling"],
+          forceNew: false, // Важливо! Не створюємо нове з'єднання, якщо вже є
+          secure: false,
+        });
+      }
 
       // Додаємо обробники для моніторингу стану з'єднання
       this.socket.on("connect", () => {
@@ -39,6 +51,7 @@ const chatClient = {
 
         // Пробуємо завантажити чати одразу після підключення
         if (this.currentUserId) {
+          this.connectUser();
           this.loadChats();
         }
       });
@@ -59,10 +72,6 @@ const chatClient = {
       return this;
     }
 
-    // Get current user from localStorage
-    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-    this.currentUserId = currentUser.id ? String(currentUser.id) : null; // Ensure string
-
     // Set up socket event listeners
     this.setupSocketEvents();
 
@@ -73,9 +82,9 @@ const chatClient = {
     }
 
     // Connect user to socket if logged in
-    if (this.currentUserId && this.socket.connected) {
+    if (this.currentUserId && this.socket && this.socket.connected) {
       this.connectUser();
-    } else if (this.currentUserId) {
+    } else if (this.currentUserId && this.socket) {
       // Якщо користувач авторизований, але сокет ще не підключений,
       // налаштовуємо обробник для підключення, коли сокет стане активним
       this.socket.on("connect", () => {
@@ -782,6 +791,9 @@ const chatClient = {
 
       // Play notification sound
       this.playNotificationSound();
+
+      // Set bell to normal (not yellow)
+      notificationBtn.style.backgroundImage = "url(/public/src/assets/bell.png)";
     }
 
     // Add to notifications popup
@@ -806,8 +818,17 @@ const chatClient = {
             </div>
           `;
 
-            // Add to top of notifications
-            popupBody.insertAdjacentHTML("beforeend", notificationHTML);
+            // Add to top of notifications (prepend)
+            popupBody.insertAdjacentHTML("afterbegin", notificationHTML);
+
+            // Keep only the last 3 notifications
+            const notifications = popupBody.querySelectorAll('.notification');
+            if (notifications.length > 3) {
+              // Remove older notifications
+              for (let i = 3; i < notifications.length; i++) {
+                notifications[i].remove();
+              }
+            }
 
             // Attach click event to the newly added notification
             const newNotification = popupBody.querySelector(
@@ -875,18 +896,24 @@ const chatClient = {
 
   // Mark all users on the page as offline initially, current user as online if connected
   markAllUsersAsOfflineInitially: function () {
-    const currentUserIdStr = this.currentUserId; // Already a string or null
+    const currentUserIdStr = String(this.currentUserId);
+
+    console.log(`Setting initial statuses, current user: ${currentUserIdStr}`);
 
     // Helper to update status for an element
     const updateElementStatus = (elementUserId, defaultStatus) => {
-      if (
-          elementUserId === currentUserIdStr &&
-          this.socket &&
-          this.socket.connected
-      ) {
+      // Спочатку перевіряємо, чи це поточний користувач
+      if (elementUserId === currentUserIdStr) {
+        console.log(`Found current user element with ID ${elementUserId}, setting status to online`);
         this.updateUserStatus(elementUserId, "online");
+
+        // Оновлюємо кеш - додаємо поточного користувача до онлайн-списку
+        this.knownOnlineUsers.add(currentUserIdStr);
       } else {
-        this.updateUserStatus(elementUserId, defaultStatus);
+        // Для інших користувачів перевіряємо чи вони в списку онлайн
+        const isOnline = this.knownOnlineUsers.has(elementUserId);
+        const status = isOnline ? "online" : defaultStatus;
+        this.updateUserStatus(elementUserId, status);
       }
     };
 
@@ -909,31 +936,71 @@ const chatClient = {
   updateUserStatus: function (userId, status) {
     const userIdStr = String(userId); // Ensure userId is a string
 
-    // Target elements in chat interface (chat items, member lists)
-    const chatUIUserElements = document.querySelectorAll(
-        `.chat-item[data-user-id="${userIdStr}"], .member[data-user-id="${userIdStr}"]`
-    );
+    console.log(`Updating status for user ${userIdStr} to ${status} in chat interface`);
 
-    chatUIUserElements.forEach((element) => {
+    // Update status in the members list - directly targeting .member elements with the data-user-id attribute
+    const memberElements = document.querySelectorAll(`.member[data-user-id="${userIdStr}"]`);
+
+    // Also update status in chat items (for the chat list)
+    const chatItemElements = document.querySelectorAll(`.chat-item[data-user-id="${userIdStr}"]`);
+
+    // Find any other elements with the user's ID (for example, in the chat messages)
+    const otherElements = document.querySelectorAll(`[data-user-id="${userIdStr}"]:not(.member):not(.chat-item)`);
+
+    const allElements = [...memberElements, ...chatItemElements, ...otherElements];
+
+    console.log(`Found ${allElements.length} elements to update in chat interface: ${memberElements.length} members, ${chatItemElements.length} chat items, and ${otherElements.length} other elements`);
+
+    if (allElements.length === 0) {
+      // If no specific elements found, we might need to create status elements for future reference
+      console.log(`No elements found with data-user-id="${userIdStr}", adding to known online users cache only`);
+      // Still update the knownOnlineUsers cache
+      if (status === 'online') {
+        this.knownOnlineUsers.add(userIdStr);
+      } else {
+        this.knownOnlineUsers.delete(userIdStr);
+      }
+      return;
+    }
+
+    allElements.forEach((element) => {
+      // Remove all status classes first
       element.classList.remove("online", "offline", "away");
+
+      // Add the current status class
       element.classList.add(status);
+
+      // Update status indicator if it exists
       const statusIndicator = element.querySelector(".status-indicator");
       if (statusIndicator) {
         statusIndicator.className = `status-indicator ${status}`;
-        statusIndicator.title =
-            status.charAt(0).toUpperCase() + status.slice(1);
+        statusIndicator.title = status.charAt(0).toUpperCase() + status.slice(1);
+        console.log(`Updated status indicator for user ${userIdStr} in element:`, element);
+      } else {
+        // If the status indicator doesn't exist, create one
+        const newStatusIndicator = document.createElement('div');
+        newStatusIndicator.className = `status-indicator ${status}`;
+        newStatusIndicator.title = status.charAt(0).toUpperCase() + status.slice(1);
+
+        // Try to append it to a sensible location within the element
+        const chatInfo = element.querySelector('.chat-info');
+        if (chatInfo) {
+          chatInfo.appendChild(newStatusIndicator);
+          console.log(`Created new status indicator for user ${userIdStr} in chat-info`);
+        } else {
+          // For member elements, we should append it directly
+          element.appendChild(newStatusIndicator);
+          console.log(`Created new status indicator for user ${userIdStr} at element root`);
+        }
       }
     });
 
-    // Target status indicators in the main students table
-    const studentTableStatusIndicators = document.querySelectorAll(
-        `.students-table tr[data-user-id="${userIdStr}"] .status-indicator`
-    );
-
-    studentTableStatusIndicators.forEach((indicator) => {
-      indicator.className = `status-indicator ${status}`; // e.g., "status-indicator online"
-      indicator.title = status.charAt(0).toUpperCase() + status.slice(1); // e.g., "Online"
-    });
+    // Make sure the user status is synced with the onlineUserCache set
+    if (status === 'online') {
+      this.knownOnlineUsers.add(userIdStr);
+    } else {
+      this.knownOnlineUsers.delete(userIdStr);
+    }
   },
 
   // Show error message in chat area

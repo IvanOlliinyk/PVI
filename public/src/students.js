@@ -133,6 +133,8 @@ let currentPage = 1;
 const studentsPerPage = 5;
 let totalStudents = [];
 let totalPages = 1;
+// Кеш для зберігання онлайн-статусів користувачів
+let onlineUserCache = new Set();
 
 // Функція для очищення повідомлень про помилки
 function clearValidationErrors() {
@@ -573,9 +575,6 @@ async function loadStudents() {
 }
 
 // Функція для відображення студентів у таблиці
-// Функція для відображення студентів у таблиці
-// Функція для відображення студентів у таблиці
-// Функція для відображення студентів у таблиці
 function renderStudentsTable() {
   const tbody = document.querySelector(".students-table");
   tbody.innerHTML = "";
@@ -585,12 +584,9 @@ function renderStudentsTable() {
     return;
   }
 
-  // Отримуємо дані поточного користувача
-  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  const currentFirstName = currentUser.firstname?.toLowerCase();
-  const currentLastName = currentUser.lastname?.toLowerCase();
-
-  console.log(`Поточний користувач: ${currentFirstName} ${currentLastName}`);
+  // Запит на оновлення статусів користувачів
+  // Виконуємо запит статусів перед рендерингом
+  refreshUserStatuses();
 
   // Обчислюємо студентів для поточної сторінки
   const startIndex = (currentPage - 1) * studentsPerPage;
@@ -600,20 +596,17 @@ function renderStudentsTable() {
   currentPageStudents.forEach(student => {
     const formattedBirthday = formatDateToDisplay(student.birthday);
 
-    // Порівнюємо ім'я та прізвище поточного користувача з даними студента
-    const studentFirstName = student.firstname?.toLowerCase();
-    const studentLastName = student.lastname?.toLowerCase();
+    // Визначення статусу на основі user_id та кешу онлайн-користувачів
+    let statusClass = 'inactive';
 
-    const isActive = currentFirstName && currentLastName &&
-        studentFirstName === currentFirstName &&
-        studentLastName === currentLastName;
-
-    console.log(`Студент: ${studentFirstName} ${studentLastName}, Активний: ${isActive}`);
-
-    const statusClass = isActive ? 'active' : 'inactive';
+    if (student.user_id) {
+      // Перевіряємо, чи користувач онлайн по його ID
+      const isOnline = onlineUserCache.has(String(student.user_id));
+      statusClass = isOnline ? 'active' : 'inactive';
+    }
 
     tbody.insertAdjacentHTML("beforeend", `
-      <tr data-id="${student.id}">
+      <tr data-id="${student.id}" ${student.user_id ? `data-user-id="${student.user_id}"` : ''}>
         <td>
           <label class="checkbox-container">
             <input type="checkbox" class="student-select custom-check" data-id="${student.id}"/>
@@ -692,7 +685,6 @@ function goToPage(page) {
 }
 
 // Функція для оновлення обробників подій чекбоксів
-// Функція для оновлення обробників подій чекбоксів
 function updateCheckboxes() {
   const selectAllCheckbox = document.getElementById('selectAll');
   const studentCheckboxes = document.querySelectorAll('.student-select');
@@ -753,6 +745,161 @@ function toggleEditButtons() {
   }
 }
 
+// Функція для отримання даних про онлайн-статуси користувачів
+async function refreshUserStatuses() {
+  try {
+    // Перевіряємо наявність Socket.io-клієнта
+    if (window.chatClient && window.chatClient.socket && window.chatClient.socket.connected) {
+      // Викликаємо існуючу функцію з чат-системи
+      window.chatClient.socket.emit('request_user_statuses');
+      console.log('Requested user statuses from chat server');
+    } else if (window.io) {
+      // Якщо Socket.io підключений, але chatClient не ініціалізований
+      console.log('Chat client not initialized but Socket.io available, trying to fetch statuses');
+      await initMinimalChatConnection();
+    } else {
+      console.log('Socket.IO not available, cannot fetch real-time statuses');
+    }
+  } catch (error) {
+    console.error('Error refreshing user statuses:', error);
+  }
+}
+
+// Функція для ініціалізації мінімального підключення до чат-сервера для отримання статусів
+async function initMinimalChatConnection() {
+  try {
+    console.log("Initializing minimal chat connection for status updates");
+
+    // Перевіряємо наявність socket-manager
+    if (window.socketManager) {
+      console.log("Using shared socket manager for status updates");
+
+      // Отримуємо спільне підключення
+      const sharedSocket = window.socketManager.getSocket();
+
+      if (sharedSocket) {
+        // Додаємо обробник статусів користувачів, якщо ще не додано
+        sharedSocket.on("online_users", (onlineUserIds) => {
+          console.log('Received online users list in students page:', onlineUserIds);
+          // Оновлюємо кеш онлайн-користувачів
+          onlineUserCache = new Set(onlineUserIds.map(id => String(id)));
+          // Оновлюємо таблицю студентів з новими статусами
+          updateStudentTableStatuses();
+        });
+
+        // Запитуємо поточні статуси
+        sharedSocket.emit('request_user_statuses');
+
+        // Повертаємо успіх
+        return true;
+      }
+    }
+
+    // Якщо немає socket-manager, використовуємо старий код створення нового підключення
+    if (window.statusSocket && window.statusSocket.connected) {
+      console.log("Using existing status socket connection");
+      window.statusSocket.emit('request_user_statuses');
+      return true;
+    }
+
+    // Створюємо тимчасове з'єднання для отримання статусів
+    window.statusSocket = io("http://localhost:3001", {
+      reconnectionAttempts: 3,
+      timeout: 5000,
+      transports: ["websocket", "polling"],
+      forceNew: false // Важливо! Дозволяємо використовувати існуюче з'єднання
+    });
+
+    // Додаємо обробники подій
+    window.statusSocket.on('connect', () => {
+      console.log('Status socket connected successfully with ID:', window.statusSocket.id);
+      window.statusSocket.emit('request_user_statuses');
+    });
+
+    // Обробляємо помилки підключення
+    window.statusSocket.on('connect_error', (error) => {
+      console.error('Status socket connection error:', error);
+    });
+
+    // Обробляємо статуси користувачів
+    window.statusSocket.on('online_users', (onlineUserIds) => {
+      console.log('Received online users list:', onlineUserIds);
+      // Оновлюємо кеш онлайн-користувачів
+      onlineUserCache = new Set(onlineUserIds.map(id => String(id)));
+      // Оновлюємо таблицю студентів з новими статусами
+      updateStudentTableStatuses();
+    });
+
+    // Обробляємо роз'єднання
+    window.statusSocket.on('disconnect', () => {
+      console.log('Status socket disconnected');
+    });
+
+    // Встановлюємо ідентифікатор користувача після підключення
+    window.statusSocket.on('connect', () => {
+      try {
+        // Отримуємо ID поточного користувача
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (currentUser && currentUser.id) {
+          // Реєструємо користувача як онлайн
+          window.statusSocket.emit('user_connected', currentUser.id);
+          console.log('Registered current user as online:', currentUser.id);
+        }
+      } catch (error) {
+        console.error('Error identifying current user:', error);
+      }
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error initializing minimal chat connection:', error);
+    return false;
+  }
+}
+
+// Функція для оновлення статусів у таблиці студентів
+function updateStudentTableStatuses() {
+  const rows = document.querySelectorAll('.students-table tr[data-id]');
+
+  rows.forEach(row => {
+    const studentId = row.getAttribute('data-id');
+    const student = totalStudents.find(s => s.id == studentId);
+
+    if (student && student.user_id) {
+      const isOnline = onlineUserCache.has(String(student.user_id));
+      // Використовуємо правильний селектор - елемент div у 6-й колонці
+      const statusCell = row.querySelector('td:nth-child(6) div');
+
+      if (statusCell) {
+        // Просто встановлюємо відповідний клас
+        statusCell.className = isOnline ? 'active' : 'inactive';
+        console.log(`Оновлюємо статус для студента ${student.firstname} ${student.lastname} (${student.user_id}): ${isOnline ? 'online' : 'offline'}`);
+      } else {
+        console.warn(`Не знайдено елемент для відображення статусу для студента з ID ${studentId}`);
+      }
+    }
+  });
+}
+
+// Функція для отримання поточних онлайн-статусів через API
+async function fetchOnlineStatusesFromServer() {
+  try {
+    const response = await fetch('http://localhost:3001/api/users/online');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && Array.isArray(data.onlineUsers)) {
+        // Оновлюємо кеш онлайн-користувачів
+        onlineUserCache = new Set(data.onlineUsers.map(id => String(id)));
+        return true;
+      }
+    }
+    return false;
+  } catch (error) {
+    console.error('Error fetching online statuses:', error);
+    return false;
+  }
+}
+
 // Завантажуємо студентів при завантаженні сторінки
 document.addEventListener("DOMContentLoaded", function() {
   // Завантажуємо студентів
@@ -760,6 +907,19 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Налаштовуємо обробники подій для форми
   setupFormHandlers();
+
+  // Ініціалізуємо підключення для отримання статусів
+  console.log("Initializing status connection on page load");
+  setTimeout(() => {
+    // Додаткова спроба підключення до серверу через 2 секунди після завантаження
+    refreshUserStatuses();
+
+    // Періодично оновлюємо статуси
+    setInterval(() => {
+      console.log("Periodic status refresh");
+      refreshUserStatuses();
+    }, 30000); // Кожні 30 секунд
+  }, 2000);
 });
 
 // Функція для налаштування обробників подій форми
@@ -847,7 +1007,7 @@ function setupFormHandlers() {
 function updateNotification() {
   const notification = document.querySelector("#notification-btn.notification");
   if (notification) {
-    notification.style.backgroundImage = "url(src/assets/bell.png)";
+    notification.style.backgroundImage = "url(/public/src/assets/bell.png)";
   }
 }
 
@@ -932,6 +1092,4 @@ document.addEventListener('DOMContentLoaded', function() {
     newNotificationBtn.style.cursor = 'pointer';
   }
 });
-
-
 

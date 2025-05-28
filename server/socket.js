@@ -5,12 +5,22 @@ module.exports = function(io) {
   // Keep track of online users
   const onlineUsers = {};
 
+  // Зберігаємо таймери відключення щоб мати змогу їх відміняти
+  const disconnectTimers = {};
+
   io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
 
     // User joins with their ID
     socket.on('user_connected', (userId) => {
       if (userId) {
+        // Скасовуємо таймер відключення, якщо він був встановлений
+        if (disconnectTimers[userId]) {
+          console.log(`Cancelling disconnect timer for user ${userId}`);
+          clearTimeout(disconnectTimers[userId]);
+          delete disconnectTimers[userId];
+        }
+
         // Store user's socket ID
         onlineUsers[userId] = socket.id;
         socket.userId = userId;
@@ -24,6 +34,11 @@ module.exports = function(io) {
         // Send new chat notifications for any chats created while user was offline
         notifyNewChats(userId, socket);
       }
+    });
+
+    // Додаємо обробник для явного запиту статусів
+    socket.on('request_user_statuses', () => {
+      socket.emit('online_users', Object.keys(onlineUsers));
     });
 
     // User joins a specific chat room
@@ -183,11 +198,23 @@ module.exports = function(io) {
     // User disconnected
     socket.on('disconnect', () => {
       if (socket.userId) {
-        // Remove from online users
-        delete onlineUsers[socket.userId];
+        const userId = socket.userId;
 
-        // Broadcast user's offline status
-        io.emit('user_status', { userId: socket.userId, status: 'offline' });
+        // Встановлюємо таймер, щоб не змінювати статус користувача відразу
+        disconnectTimers[userId] = setTimeout(() => {
+          // Перевіряємо, чи користувач справді офлайн (не переподключився за час таймера)
+          if (onlineUsers[userId] === socket.id) {
+            // Видаляємо з онлайн користувачів
+            delete onlineUsers[userId];
+
+            // Транслюємо статус офлайн
+            io.emit('user_status', { userId: userId, status: 'offline' });
+            console.log(`User ${userId} marked as offline after disconnect timeout`);
+          }
+
+          // Видаляємо таймер
+          delete disconnectTimers[userId];
+        }, 5000); // 5 секунд затримки перед встановленням статусу "offline"
       }
       console.log('User disconnected:', socket.id);
     });
