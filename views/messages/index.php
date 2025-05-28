@@ -1,3 +1,24 @@
+<?php
+// Підключаємо перевірку статусу авторизації
+require_once __DIR__ . '/../../api/auth_check.php';
+
+// Додамо перевірку авторизації через JavaScript
+echo '<script>
+  // Перевіряємо наявність користувача у localStorage
+  document.addEventListener("DOMContentLoaded", function() {
+    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+    if (!currentUser.id) {
+      // Якщо користувач не авторизований, показуємо повідомлення 
+      document.getElementById("main-content").style.display = "none";
+      document.getElementById("auth-required-message").style.display = "block";
+    } else {
+      // Якщо авторизований, показуємо вміст
+      document.getElementById("main-content").style.display = "flex";
+      document.getElementById("auth-required-message").style.display = "none";
+    }
+  });
+</script>';
+?>
 <!doctype html>
 <html lang="en">
 <head>
@@ -20,34 +41,20 @@
             <div id="notifications-popup" class="popup">
                 <div class="popup-content">
                     <div class="popup-body">
-                        <div class="notification">
-                            <div>
-                                <img src="/public/src/assets/max.jpg" alt="profile">
-                                <p>Max Sakh</p>
-                            </div>
-                            <p>Nihao padoshva</p>
-                        </div>
-                        <div class="notification">
-                            <div>
-                                <img src="/public/src/assets/chef.jpg" alt="profile">
-                                <p>Shef</p>
-                            </div>
-                            <p>Fortnite 16:40</p>
-                        </div>
-                        <div class="notification">
-                            <div>
-                                <img src="/public/src/assets/yura.jpg" alt="profile">
-                                <p>Yurii Stelmakh</p>
-                            </div>
-                            <p>I'm not Grisana</p>
-                        </div>
+                        <!-- Notifications will be dynamically inserted here -->
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Auth buttons (shown when not logged in) -->
+        <div id="auth-buttons" class="auth-buttons" style="display:none;">
+            <button id="login-button" class="auth-btn login-btn">Login</button>
+            <button id="register-button" class="auth-btn register-btn">Register</button>
+        </div>
+
         <!-- User profile (shown when logged in) -->
-        <div id="user-profile" class="profile-area">
+        <div id="user-profile" class="profile-area" style="display:none;">
             <div class="profile-wrapper">
                 <button id="profile-btn" class="user">Profile</button>
                 <div id="profile-popup" class="popup">
@@ -65,6 +72,20 @@
     <a href="/views/students/index.php">Students</a>
     <a href="/views/tasks/index.php">Tasks</a>
 </nav>
+
+<!-- AUTH REQUIRED MESSAGE -->
+<div id="auth-required-message" style="display: none;">
+  <div class="auth-required-container">
+    <h2>Доступ обмежено</h2>
+    <div class="neon-glow">
+      <p>Для перегляду цієї сторінки необхідно авторизуватися</p>
+      <div class="auth-buttons-container">
+        <button id="auth-login-button" class="auth-btn login-btn">Увійти</button>
+        <button id="auth-register-button" class="auth-btn register-btn">Зареєструватися</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="content-wrapper" id="main-content">
     <nav class="side_bar">
@@ -85,62 +106,21 @@
                 </div>
 
                 <div class="chat-list-items">
-                    <div class="chat-item active">
-                        <div class="chat-avatar">
-                            <img src="/public/src/assets/avatar-placeholder.png" alt="Admin">
-                        </div>
-                        <div class="chat-info">
-                            <span class="chat-name">Admin</span>
-                        </div>
-                    </div>
-
-                    <div class="chat-item">
-                        <div class="chat-avatar">
-                            <img src="/public/src/assets/avatar-placeholder.png" alt="Ann Smith">
-                        </div>
-                        <div class="chat-info">
-                            <span class="chat-name">Ann Smith</span>
-                        </div>
-                    </div>
-
-                    <div class="chat-item">
-                        <div class="chat-avatar">
-                            <img src="/public/src/assets/avatar-placeholder.png" alt="John Bond">
-                        </div>
-                        <div class="chat-info">
-                            <span class="chat-name">John Bond</span>
-                        </div>
-                    </div>
-
-                    <div class="chat-item">
-                        <div class="chat-avatar">
-                            <img src="/public/src/assets/avatar-placeholder.png" alt="Ivan Stan">
-                        </div>
-                        <div class="chat-info">
-                            <span class="chat-name">Ivan Stan</span>
-                        </div>
-                    </div>
+                    <!-- Chat items will be dynamically inserted here -->
+                    <div class="loading-chats">Loading chats...</div>
                 </div>
             </div>
 
             <!-- Chat window -->
             <div class="chat-window">
                 <div class="chat-header">
-                    <h2>Chat room Admin</h2>
+                    <h2>Select a chat</h2>
                 </div>
 
                 <div class="chat-members">
                     <h3>Members</h3>
                     <div class="members-list">
-                        <div class="member">
-                            <img src="/public/src/assets/avatar-placeholder.png" alt="Member">
-                        </div>
-                        <div class="member">
-                            <img src="/public/src/assets/avatar-placeholder.png" alt="Member">
-                        </div>
-                        <div class="member">
-                            <img src="/public/src/assets/avatar-placeholder.png" alt="Member">
-                        </div>
+                        <!-- Members will be dynamically inserted here -->
                         <div class="member add-member">
                             <span>+</span>
                         </div>
@@ -150,28 +130,9 @@
                 <h3 class="messages-header">Messages</h3>
 
                 <div class="chat-messages">
-                    <div class="message incoming">
-                        <div class="message-avatar">
-                            <img src="/public/src/assets/avatar-placeholder.png" alt="Admin">
-                        </div>
-                        <div class="message-content">
-                            <div class="message-bubble">
-                                <p>Welcome to the chat room!</p>
-                            </div>
-                            <span class="message-sender">Admin</span>
-                        </div>
-                    </div>
-
-                    <div class="message outgoing">
-                        <div class="message-content">
-                            <div class="message-bubble">
-                                <p>Hello everyone!</p>
-                            </div>
-                        </div>
-                        <div class="message-avatar">
-                            <img src="/public/src/assets/avatar-placeholder.png" alt="Me">
-                            <span class="message-sender">Me</span>
-                        </div>
+                    <!-- Messages will be dynamically inserted here -->
+                    <div class="chat-placeholder">
+                        <p>Select a chat to start messaging</p>
                     </div>
                 </div>
 
@@ -186,61 +147,65 @@
     </main>
 </div>
 
-<script src="/public/src/notifications.js"></script>
-<script>
-  // Basic chat functionality for demonstration
-  document.addEventListener('DOMContentLoaded', function() {
-    const chatItems = document.querySelectorAll('.chat-item');
-    const sendBtn = document.querySelector('.send-btn');
-    const chatInput = document.querySelector('.chat-input input');
-    const chatMessages = document.querySelector('.chat-messages');
+<!-- Modal for creating new chat room -->
+<div id="new-chat-modal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="close-modal" id="close-new-chat">&times;</span>
+    <h2>Створити новий чат</h2>
+    <div>
+      <label for="chat-name">Назва чату (опціонально):</label>
+      <input type="text" id="chat-name" placeholder="Введіть назву чату">
+    </div>
+    <div>
+      <h3>Виберіть учасників:</h3>
+      <div id="students-list-for-chat">
+        <p>Завантаження студентів...</p>
+      </div>
+    </div>
+    <button id="create-chat-btn">Створити чат</button>
+  </div>
+</div>
 
-    // Switch between chat rooms
-    chatItems.forEach(item => {
-      item.addEventListener('click', function() {
-        chatItems.forEach(i => i.classList.remove('active'));
-        this.classList.add('active');
+<!-- AUTH POPUPS -->
+<div id="auth-window">
+  <!-- Login popup -->
+  <div id="login-popup" class="auth-popup">
+    <span>Login</span>
+    <button id="close-login" class="close-popup">Close</button>
+    <div class="auth-popup-content">
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" placeholder="Enter your email">
+      <label for="login-password">Password</label>
+      <input type="password" id="login-password" placeholder="Enter your password">
+      <div class="form-error" id="login-error"></div>
+      <div class="auth-popup-buttons">
+        <button class="cancel" id="cancel-login">Cancel</button>
+        <button class="proceed" id="proceed-login">Login</button>
+      </div>
+    </div>
+  </div>
 
-        // Update chat header with selected chat name
-        const chatName = this.querySelector('.chat-name').textContent;
-        document.querySelector('.chat-header h2').textContent = 'Chat room ' + chatName;
-      });
-    });
+  <!-- Registration popup -->
+  <div id="register-popup" class="auth-popup">
+    <span>Register</span>
+    <button id="close-register" class="close-popup">Close</button>
+    <div class="auth-popup-content">
+      <!-- Register form fields -->
+      <div class="form-error" id="register-error"></div>
+      <div class="auth-popup-buttons">
+        <button class="cancel" id="cancel-register">Cancel</button>
+        <button class="proceed" id="proceed-register">Register</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-    // Send message functionality
-    sendBtn.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        sendMessage();
-      }
-    });
-
-    function sendMessage() {
-      const message = chatInput.value.trim();
-      if (message) {
-        const messageHTML = `
-          <div class="message outgoing">
-            <div class="message-content">
-              <div class="message-bubble">
-                <p>${message}</p>
-              </div>
-            </div>
-            <div class="message-avatar">
-              <img src="/public/src/assets/avatar-placeholder.png" alt="Me">
-              <span class="message-sender">Me</span>
-            </div>
-          </div>
-        `;
-
-        chatMessages.insertAdjacentHTML('beforeend', messageHTML);
-        chatInput.value = '';
-
-        // Scroll to bottom
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-      }
-    }
-  });
-</script>
+<!-- Socket.IO client - змінюємо на CDN для надійності -->
+<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+<script src="/public/src/auth.js"></script>
+<script src="/public/src/students.js"></script>
+<script src="/public/src/chat-helper.js"></script>
+<script src="/public/src/chat.js"></script>
 
 </body>
 </html>

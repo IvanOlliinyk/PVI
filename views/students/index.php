@@ -118,7 +118,7 @@
         <tbody class="students-table">
         <?php if (isset($students) && !empty($students)): ?>
             <?php foreach ($students as $student): ?>
-            <tr data-id="<?php echo $student->getId(); ?>">
+            <tr data-id="<?php echo $student->getId(); ?>" data-user-id="<?php echo $student->getUserId(); ?>">
               <td>
                 <label class="checkbox-container">
                   <input type="checkbox" class="student-select custom-check" data-id="<?php echo $student->getId(); ?>"/>
@@ -130,7 +130,7 @@
               <td><?php echo htmlspecialchars($student->getFullName()); ?></td>
               <td><?php echo htmlspecialchars($student->getGender()); ?></td>
               <td><?php echo htmlspecialchars($student->getBirthday()); ?></td>
-              <td><div class="active"></div></td>
+              <td><div class="status-indicator offline" title="Offline"></div></td>
               <td>
                 <button class="edit" aria-label="Edit" onclick="editStudent(<?php echo $student->getId(); ?>)"></button>
                 <button class="delete" aria-label="Delete" onclick="deleteStudentPrompt(<?php echo $student->getId(); ?>, '<?php echo htmlspecialchars($student->getFullName()); ?>')"></button>
@@ -337,3 +337,4 @@
 
 </body>
 </html>
+

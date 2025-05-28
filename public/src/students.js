@@ -314,7 +314,7 @@ function deleteStudentPrompt(id, fullname) {
   } else if (selectedCheckboxes.length > 0) {
     // Видалення декількох вибраних студентів
     const studentIds = Array.from(selectedCheckboxes).map(checkbox =>
-      checkbox.getAttribute('data-id')
+        checkbox.getAttribute('data-id')
     );
 
     // Отримуємо імена вибраних студентів для повідомлення
@@ -605,8 +605,8 @@ function renderStudentsTable() {
     const studentLastName = student.lastname?.toLowerCase();
 
     const isActive = currentFirstName && currentLastName &&
-      studentFirstName === currentFirstName &&
-      studentLastName === currentLastName;
+        studentFirstName === currentFirstName &&
+        studentLastName === currentLastName;
 
     console.log(`Студент: ${studentFirstName} ${studentLastName}, Активний: ${isActive}`);
 
@@ -932,3 +932,6 @@ document.addEventListener('DOMContentLoaded', function() {
     newNotificationBtn.style.cursor = 'pointer';
   }
 });
+
+
+
